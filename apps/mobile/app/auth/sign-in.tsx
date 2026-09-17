@@ -65,6 +65,7 @@ export default function SignInScreen() {
         />
       </View>
 
+      {/* TODO: Re-enable when open sign-ups are allowed
       <TouchableOpacity
         onPress={() => router.push('/auth/sign-up')}
         style={styles.switchLink}
@@ -74,6 +75,7 @@ export default function SignInScreen() {
           <Text style={styles.switchTextBold}>Sign up</Text>
         </Text>
       </TouchableOpacity>
+      */}
     </ScreenContainer>
   );
 }
