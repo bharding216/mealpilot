@@ -10,6 +10,8 @@
     "mobile": "npm run start --workspace=apps/mobile",
     "api": "npm run dev --workspace=apps/api",
     "api:build": "npm run build --workspace=apps/api",
+    "build": "npm run build --workspace=apps/api",
+    "start": "npm run start --workspace=apps/api",
     "typecheck": "tsc --build"
   },
   "engines": {
