@@ -59,12 +59,7 @@ export default function ProfileScreen() {
           icon="storefront"
           label="H‑E‑B Store"
           subtitle="Not set"
-          onPress={() =>
-            Alert.alert(
-              'Coming Soon',
-              'H‑E‑B store selection and grocery cart integration is coming in a future update!'
-            )
-          }
+          onPress={() => router.push('/heb-connect')}
         />
       </View>
 

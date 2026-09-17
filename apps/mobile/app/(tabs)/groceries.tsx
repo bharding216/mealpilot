@@ -215,7 +215,7 @@ export default function GroceriesScreen() {
         stickySectionHeadersEnabled={false}
       />
 
-      {/* Regenerate button */}
+      {/* Actions */}
       <View style={styles.footer}>
         <Button
           title="Regenerate List"
@@ -223,6 +223,16 @@ export default function GroceriesScreen() {
           variant="outline"
           size="sm"
           loading={generating}
+        />
+        <Button
+          title="Match H‑E‑B Products"
+          onPress={() =>
+            router.push({
+              pathname: '/heb-match',
+              params: { mealPlanId: currentPlan?.id },
+            })
+          }
+          size="sm"
         />
       </View>
     </ScreenContainer>

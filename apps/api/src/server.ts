@@ -5,6 +5,7 @@ import { healthRoutes } from './routes/health.js';
 import { mealPlanRoutes } from './routes/mealPlan.js';
 import { profileRoutes } from './routes/profile.js';
 import { groceryRoutes } from './routes/grocery.js';
+import { hebRoutes } from './routes/heb.js';
 
 async function main() {
   validateEnv();
@@ -29,6 +30,7 @@ async function main() {
   await app.register(mealPlanRoutes);
   await app.register(profileRoutes);
   await app.register(groceryRoutes);
+  await app.register(hebRoutes);
 
   // Global error handler
   app.setErrorHandler((error: Error & { statusCode?: number }, _request, reply) => {

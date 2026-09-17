@@ -100,9 +100,54 @@ export interface GroceryItem {
 
 export interface MatchedProduct {
   productId: string;
+  skuId: string;
   name: string;
   brand: string | null;
   size: string | null;
+  price: number | null;
+  unitPrice: string | null;
+  imageUrl: string | null;
+  productUrl: string | null;
+  inStock: boolean;
+  category: string | null;
+  status: 'matched' | 'confirmed' | 'rejected' | 'in_cart';
+}
+
+// ─── H-E-B ───
+
+export interface HebSessionStatus {
+  connected: boolean;
+  store: { storeId: string; name: string } | null;
+  lastUpdated: string | null;
+}
+
+export interface HebProduct {
+  productId: string;
+  skuId: string;
+  name: string;
+  brand: string | null;
+  size: string | null;
+  price: number | null;
+  unitPrice: string | null;
+  imageUrl: string | null;
+  productUrl: string | null;
+  inStock: boolean;
+  category: string | null;
+}
+
+export interface HebCart {
+  id: string;
+  items: HebCartItem[];
+  estimatedTotal: number | null;
+  itemCount: number;
+  store: { storeId: string; name: string; address: string; city: string; state: string; zip: string } | null;
+}
+
+export interface HebCartItem {
+  productId: string;
+  skuId: string;
+  name: string;
+  quantity: number;
   price: number | null;
   imageUrl: string | null;
 }
