@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true,
+    "paths": {
+      "@mealpilot/shared": ["../../packages/shared/src"],
+      "@mealpilot/heb": ["../../packages/heb/src"]
+    }
+  },
+  "include": ["src"]
+}
