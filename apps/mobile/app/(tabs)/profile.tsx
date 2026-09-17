@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,16 +35,27 @@ export default function ProfileScreen() {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Preferences</Text>
-        <MenuItem icon="nutrition-outline" label="Dietary Restrictions" />
-        <MenuItem icon="heart-outline" label="Favorite Cuisines" />
-        <MenuItem icon="people-outline" label="Household Size" />
-        <MenuItem icon="timer-outline" label="Cooking Time" />
-        <MenuItem icon="wallet-outline" label="Grocery Budget" />
+        <TouchableOpacity
+          style={styles.prefsButton}
+          onPress={() => router.push('/preferences')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.prefsButtonInner}>
+            <Ionicons name="options-outline" size={20} color={colors.primary} />
+            <View style={styles.prefsButtonContent}>
+              <Text style={styles.prefsButtonLabel}>Edit Preferences</Text>
+              <Text style={styles.prefsButtonDesc}>
+                Dietary restrictions, cuisines, budget, and more
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+          </View>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Store</Text>
-        <MenuItem icon="storefront-outline" label="H‑E‑B Store" />
+        <MenuItem icon="storefront-outline" label="H‑E‑B Store" subtitle="Not set" />
       </View>
 
       <View style={styles.signOutContainer}>
@@ -58,11 +70,14 @@ export default function ProfileScreen() {
   );
 }
 
-function MenuItem({ icon, label }: { icon: string; label: string }) {
+function MenuItem({ icon, label, subtitle }: { icon: string; label: string; subtitle?: string }) {
   return (
     <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
       <Ionicons name={icon as any} size={20} color={colors.primary} />
-      <Text style={styles.menuLabel}>{label}</Text>
+      <View style={styles.menuItemContent}>
+        <Text style={styles.menuLabel}>{label}</Text>
+        {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
+      </View>
       <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
     </TouchableOpacity>
   );
@@ -110,6 +125,29 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
   },
+  prefsButton: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+  },
+  prefsButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  prefsButtonContent: {
+    flex: 1,
+  },
+  prefsButtonLabel: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.text,
+  },
+  prefsButtonDesc: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    marginTop: 2,
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -120,10 +158,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     gap: spacing.sm,
   },
-  menuLabel: {
+  menuItemContent: {
     flex: 1,
+  },
+  menuLabel: {
     fontSize: fontSize.md,
     color: colors.text,
+  },
+  menuSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.textTertiary,
+    marginTop: 2,
   },
   signOutContainer: {
     paddingVertical: spacing.lg,

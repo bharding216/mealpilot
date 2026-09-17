@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,18 +8,22 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { useAuth } from '@/hooks/useAuth';
+import { useMealPlan } from '@/hooks/useMealPlan';
 import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  mealPlanId?: string;
 }
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
@@ -29,10 +33,10 @@ const WELCOME_MESSAGE: ChatMessage = {
 };
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { createMealPlan, loading } = useMealPlan();
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -46,20 +50,47 @@ export default function HomeScreen() {
 
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
-    setLoading(true);
 
-    // TODO: Connect to /api/meal-plan endpoint
-    // For now, show a placeholder response
-    setTimeout(() => {
-      const assistantMsg: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          "Great idea! I'm working on creating a meal plan based on your preferences. This will be connected to the backend soon!\n\nFor now, check out the Meal Plan tab to see how the weekly view will look.",
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
-      setLoading(false);
-    }, 1000);
+    // Add a "thinking" message
+    const thinkingId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      { id: thinkingId, role: 'assistant', content: '⏳ Creating your meal plan...' },
+    ]);
+
+    try {
+      const mealPlan = await createMealPlan(text);
+
+      // Build a summary from the meal plan
+      const mealLines = mealPlan.meals
+        .sort((a, b) => a.day_of_week - b.day_of_week)
+        .map((m) => `${DAY_NAMES[m.day_of_week]}: ${m.title}`)
+        .join('\n');
+
+      const summary = `Here's your meal plan — "${mealPlan.title}":\n\n${mealLines}\n\nHead to the Meal Plan tab to see details, swap meals, or view recipes! 📋`;
+
+      // Replace the thinking message
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === thinkingId
+            ? { ...msg, content: summary, mealPlanId: mealPlan.id }
+            : msg
+        )
+      );
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Something went wrong';
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === thinkingId
+            ? { ...msg, content: `❌ ${errorMsg}\n\nPlease try again.` }
+            : msg
+        )
+      );
+    }
+  };
+
+  const scrollToEnd = () => {
+    setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
   const renderMessage = ({ item }: { item: ChatMessage }) => (
@@ -77,6 +108,15 @@ export default function HomeScreen() {
       >
         {item.content}
       </Text>
+      {item.mealPlanId && (
+        <TouchableOpacity
+          style={styles.viewPlanButton}
+          onPress={() => router.navigate('/(tabs)/plan')}
+        >
+          <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+          <Text style={styles.viewPlanText}>View Meal Plan</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -93,11 +133,13 @@ export default function HomeScreen() {
         keyboardVerticalOffset={90}
       >
         <FlatList
+          ref={flatListRef}
           data={messages}
           renderItem={renderMessage}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          onContentSizeChange={scrollToEnd}
         />
 
         <View style={styles.inputContainer}>
@@ -110,21 +152,28 @@ export default function HomeScreen() {
             multiline
             maxLength={500}
             editable={!loading}
+            onSubmitEditing={sendMessage}
           />
-          <TouchableOpacity
-            onPress={sendMessage}
-            disabled={!input.trim() || loading}
-            style={[
-              styles.sendButton,
-              (!input.trim() || loading) && styles.sendButtonDisabled,
-            ]}
-          >
-            <Ionicons
-              name="send"
-              size={20}
-              color={!input.trim() || loading ? colors.textTertiary : colors.textInverse}
-            />
-          </TouchableOpacity>
+          {loading ? (
+            <View style={styles.sendButton}>
+              <ActivityIndicator size="small" color={colors.textInverse} />
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={sendMessage}
+              disabled={!input.trim()}
+              style={[
+                styles.sendButton,
+                !input.trim() && styles.sendButtonDisabled,
+              ]}
+            >
+              <Ionicons
+                name="send"
+                size={20}
+                color={!input.trim() ? colors.textTertiary : colors.textInverse}
+              />
+            </TouchableOpacity>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -189,6 +238,20 @@ const styles = StyleSheet.create({
   },
   assistantText: {
     color: colors.text,
+  },
+  viewPlanButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    gap: spacing.xs,
+  },
+  viewPlanText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
   },
   inputContainer: {
     flexDirection: 'row',
