@@ -10,7 +10,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'light',
   newArchEnabled: true,
   splash: {
-    backgroundColor: '#1B5E20',
+    image: './assets/splash-icon.png',
+    imageResizeMode: 'contain',
+    backgroundColor: '#333333',
   },
   ios: {
     supportsTablet: false,
@@ -18,7 +20,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: '#1B5E20',
+      foregroundImage: './assets/adaptive-icon.png',
+      backgroundColor: '#333333',
     },
     package: 'com.mealpilot.app',
   },
