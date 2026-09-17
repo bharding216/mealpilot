@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { TextInput } from '@/components/TextInput';
@@ -32,7 +32,7 @@ export default function SignInScreen() {
   return (
     <ScreenContainer scrollable keyboardAvoiding>
       <View style={styles.header}>
-        <Text style={styles.logo}>🍽️</Text>
+        <Image source={require('@/assets/icon.png')} style={styles.logo} />
         <Text style={styles.appName}>MealPilot</Text>
         <Text style={styles.tagline}>
           Tell us what you want to eat.{'\n'}We'll handle the rest.
@@ -87,8 +87,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xl,
   },
   logo: {
-    fontSize: 56,
-    marginBottom: spacing.sm,
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    marginBottom: spacing.md,
   },
   appName: {
     fontSize: fontSize.xxxl,
