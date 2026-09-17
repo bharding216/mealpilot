@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useMealPlan } from '@/hooks/useMealPlan';
@@ -60,7 +60,7 @@ export default function PlanScreen() {
       <ScreenContainer title="Meal Plan">
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="calendar-outline" size={48} color={colors.textTertiary} />
+            <AppIcon name="calendar" size={48} color={colors.textTertiary} />
           </View>
           <Text style={styles.emptyTitle}>No meal plan yet</Text>
           <Text style={styles.emptyDescription}>
@@ -70,7 +70,7 @@ export default function PlanScreen() {
             style={styles.goHomeButton}
             onPress={() => router.navigate('/(tabs)/')}
           >
-            <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
+            <AppIcon name="bubble.left" size={16} color={colors.primary} />
             <Text style={styles.goHomeText}>Start planning</Text>
           </TouchableOpacity>
         </View>
@@ -153,7 +153,7 @@ function MealCard({ meal, onPress, onReplace }: MealCardProps) {
         </View>
         <Text style={styles.mealType}>{meal.meal_type}</Text>
         <TouchableOpacity onPress={onReplace} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="refresh-outline" size={18} color={colors.textTertiary} />
+          <AppIcon name="arrow.clockwise" size={18} color={colors.textTertiary} />
         </TouchableOpacity>
       </View>
 
@@ -168,12 +168,12 @@ function MealCard({ meal, onPress, onReplace }: MealCardProps) {
       <View style={styles.mealMeta}>
         {totalTime > 0 && (
           <View style={styles.metaItem}>
-            <Ionicons name="timer-outline" size={14} color={colors.textTertiary} />
+            <AppIcon name="timer" size={14} color={colors.textTertiary} />
             <Text style={styles.metaText}>{totalTime} min</Text>
           </View>
         )}
         <View style={styles.metaItem}>
-          <Ionicons name="chevron-forward" size={14} color={colors.textTertiary} />
+          <AppIcon name="chevron.right" size={14} color={colors.textTertiary} />
           <Text style={styles.metaText}>View recipe</Text>
         </View>
       </View>

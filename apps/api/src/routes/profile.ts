@@ -106,20 +106,54 @@ export async function profileRoutes(app: FastifyInstance): Promise<void> {
     if (body.data.householdSize !== undefined)
       updates.household_size = body.data.householdSize;
 
-    // Upsert preferences
-    const { data: prefs, error } = await supabaseAdmin
+    // Ensure a preferences row exists for this user
+    const { data: existing } = await supabaseAdmin
       .from('user_preferences')
-      .upsert(
-        { user_id: userId, ...updates },
-        { onConflict: 'user_id' }
-      )
-      .select()
+      .select('id')
+      .eq('user_id', userId)
       .single();
 
-    if (error) {
+    if (!existing) {
+      const { error: insertErr } = await supabaseAdmin
+        .from('user_preferences')
+        .insert({ user_id: userId, ...updates });
+
+      if (insertErr) {
+        request.log.error({ supabaseError: insertErr }, 'Failed to insert preferences');
+        return reply.code(500).send({
+          error: 'Server Error',
+          message: `Failed to create preferences: ${insertErr.message}`,
+          statusCode: 500,
+        });
+      }
+    } else {
+      const { error: updateErr } = await supabaseAdmin
+        .from('user_preferences')
+        .update(updates)
+        .eq('user_id', userId);
+
+      if (updateErr) {
+        request.log.error({ supabaseError: updateErr }, 'Failed to update preferences');
+        return reply.code(500).send({
+          error: 'Server Error',
+          message: `Failed to update preferences: ${updateErr.message}`,
+          statusCode: 500,
+        });
+      }
+    }
+
+    // Fetch the final row to return
+    const { data: prefs, error: fetchErr } = await supabaseAdmin
+      .from('user_preferences')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchErr) {
+      request.log.error({ supabaseError: fetchErr }, 'Failed to fetch preferences after save');
       return reply.code(500).send({
         error: 'Server Error',
-        message: 'Failed to update preferences',
+        message: `Failed to read preferences: ${fetchErr.message}`,
         statusCode: 500,
       });
     }

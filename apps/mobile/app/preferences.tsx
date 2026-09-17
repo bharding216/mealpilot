@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
@@ -185,8 +185,8 @@ export default function EditPreferencesScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.toggleLabel}>Kid-friendly meals</Text>
-          <Ionicons
-            name={kidFriendly ? 'checkbox' : 'square-outline'}
+          <AppIcon
+            name={kidFriendly ? 'checkmark.square.fill' : 'square'}
             size={24}
             color={kidFriendly ? colors.primary : colors.textTertiary}
           />
@@ -220,7 +220,7 @@ function Header() {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <AppIcon name="arrow.left" size={24} color={colors.text} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>Preferences</Text>
       <View style={styles.backButton} />
@@ -265,8 +265,8 @@ function RadioOption({
       onPress={onPress}
       activeOpacity={0.7}
     >
-      <Ionicons
-        name={selected ? 'radio-button-on' : 'radio-button-off'}
+      <AppIcon
+        name={selected ? 'circle.fill' : 'circle'}
         size={20}
         color={selected ? colors.primary : colors.textTertiary}
       />

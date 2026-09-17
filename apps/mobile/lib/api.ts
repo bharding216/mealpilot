@@ -19,13 +19,15 @@ async function request<T>(
   const url = `${config.apiUrl}${path}`;
   const authHeaders = await getAuthHeaders();
 
+  const headers: Record<string, string> = { ...authHeaders };
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const res = await fetch(url, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...authHeaders,
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
 
   const json = await res.json();

@@ -8,12 +8,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'light',
-  newArchEnabled: true,
-  splash: {
-    image: './assets/splash-icon.png',
-    imageResizeMode: 'contain',
-    backgroundColor: '#333333',
-  },
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.mealpilot.app',
@@ -29,5 +23,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageResizeMode: 'contain',
+        backgroundColor: '#333333',
+      },
+    ],
   ],
-});
+} as ExpoConfig);

@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
@@ -94,13 +94,13 @@ export default function RecipeScreen() {
           )}
           {recipe.servings > 0 && (
             <View style={styles.metaItem}>
-              <Ionicons name="people-outline" size={14} color={colors.textSecondary} />
+              <AppIcon name="person.2" size={14} color={colors.textSecondary} />
               <Text style={styles.metaText}>{recipe.servings} servings</Text>
             </View>
           )}
           {totalTime > 0 && (
             <View style={styles.metaItem}>
-              <Ionicons name="timer-outline" size={14} color={colors.textSecondary} />
+              <AppIcon name="timer" size={14} color={colors.textSecondary} />
               <Text style={styles.metaText}>{totalTime} min</Text>
             </View>
           )}
@@ -178,7 +178,7 @@ export default function RecipeScreen() {
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
               <>
-                <Ionicons name="refresh-outline" size={18} color={colors.primary} />
+                <AppIcon name="arrow.clockwise" size={18} color={colors.primary} />
                 <Text style={styles.replaceButtonText}>Replace this meal</Text>
               </>
             )}
@@ -193,7 +193,7 @@ function Header({ title }: { title: string }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-        <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <AppIcon name="arrow.left" size={24} color={colors.text} />
       </TouchableOpacity>
       <Text style={styles.headerTitle} numberOfLines={1}>
         {title}

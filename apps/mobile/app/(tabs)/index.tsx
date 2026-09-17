@@ -10,7 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useMealPlan } from '@/hooks/useMealPlan';
@@ -113,7 +113,7 @@ export default function HomeScreen() {
           style={styles.viewPlanButton}
           onPress={() => router.navigate('/(tabs)/plan')}
         >
-          <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+          <AppIcon name="calendar" size={14} color={colors.primary} />
           <Text style={styles.viewPlanText}>View Meal Plan</Text>
         </TouchableOpacity>
       )}
@@ -167,8 +167,8 @@ export default function HomeScreen() {
                 !input.trim() && styles.sendButtonDisabled,
               ]}
             >
-              <Ionicons
-                name="send"
+              <AppIcon
+                name="paperplane.fill"
                 size={20}
                 color={!input.trim() ? colors.textTertiary : colors.textInverse}
               />

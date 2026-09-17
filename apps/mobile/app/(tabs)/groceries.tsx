@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
@@ -112,7 +112,7 @@ export default function GroceriesScreen() {
       <ScreenContainer title="Groceries">
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="cart-outline" size={48} color={colors.textTertiary} />
+            <AppIcon name="cart" size={48} color={colors.textTertiary} />
           </View>
           <Text style={styles.emptyTitle}>No grocery list yet</Text>
           <Text style={styles.emptyDescription}>
@@ -122,7 +122,7 @@ export default function GroceriesScreen() {
             style={styles.goHomeButton}
             onPress={() => router.navigate('/(tabs)/')}
           >
-            <Ionicons name="chatbubble-outline" size={16} color={colors.primary} />
+            <AppIcon name="bubble.left" size={16} color={colors.primary} />
             <Text style={styles.goHomeText}>Start planning</Text>
           </TouchableOpacity>
         </View>
@@ -136,7 +136,7 @@ export default function GroceriesScreen() {
       <ScreenContainer title="Groceries">
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
-            <Ionicons name="list-outline" size={48} color={colors.textTertiary} />
+            <AppIcon name="list.bullet" size={48} color={colors.textTertiary} />
           </View>
           <Text style={styles.emptyTitle}>Ready to build your list</Text>
           <Text style={styles.emptyDescription}>
@@ -153,7 +153,7 @@ export default function GroceriesScreen() {
             style={styles.pantryLink}
             onPress={() => router.push('/pantry')}
           >
-            <Ionicons name="file-tray-outline" size={16} color={colors.primary} />
+            <AppIcon name="tray" size={16} color={colors.primary} />
             <Text style={styles.pantryLinkText}>Manage pantry items first</Text>
           </TouchableOpacity>
         </View>
@@ -242,8 +242,8 @@ function GroceryItemRow({
       onPress={onToggle}
       activeOpacity={0.6}
     >
-      <Ionicons
-        name={item.checked ? 'checkbox' : 'square-outline'}
+      <AppIcon
+        name={item.checked ? 'checkmark.square.fill' : 'square'}
         size={22}
         color={item.checked ? colors.primary : colors.textTertiary}
       />

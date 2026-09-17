@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
@@ -25,7 +25,7 @@ export default function ProfileScreen() {
     <ScreenContainer title="Profile" scrollable>
       <View style={styles.card}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={28} color={colors.textInverse} />
+          <AppIcon name="person.fill" size={28} color={colors.textInverse} />
         </View>
         <View style={styles.userInfo}>
           <Text style={styles.email}>{user?.email ?? 'Not signed in'}</Text>
@@ -41,21 +41,31 @@ export default function ProfileScreen() {
           activeOpacity={0.7}
         >
           <View style={styles.prefsButtonInner}>
-            <Ionicons name="options-outline" size={20} color={colors.primary} />
+            <AppIcon name="slider.horizontal.3" size={20} color={colors.primary} />
             <View style={styles.prefsButtonContent}>
               <Text style={styles.prefsButtonLabel}>Edit Preferences</Text>
               <Text style={styles.prefsButtonDesc}>
                 Dietary restrictions, cuisines, budget, and more
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            <AppIcon name="chevron.right" size={18} color={colors.textTertiary} />
           </View>
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Store</Text>
-        <MenuItem icon="storefront-outline" label="H‑E‑B Store" subtitle="Not set" />
+        <MenuItem
+          icon="storefront"
+          label="H‑E‑B Store"
+          subtitle="Not set"
+          onPress={() =>
+            Alert.alert(
+              'Coming Soon',
+              'H‑E‑B store selection and grocery cart integration is coming in a future update!'
+            )
+          }
+        />
       </View>
 
       <View style={styles.signOutContainer}>
@@ -70,15 +80,15 @@ export default function ProfileScreen() {
   );
 }
 
-function MenuItem({ icon, label, subtitle }: { icon: string; label: string; subtitle?: string }) {
+function MenuItem({ icon, label, subtitle, onPress }: { icon: string; label: string; subtitle?: string; onPress?: () => void }) {
   return (
-    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
-      <Ionicons name={icon as any} size={20} color={colors.primary} />
+    <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={onPress}>
+      <AppIcon name={icon as any} size={20} color={colors.primary} />
       <View style={styles.menuItemContent}>
         <Text style={styles.menuLabel}>{label}</Text>
         {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+      <AppIcon name="chevron.right" size={18} color={colors.textTertiary} />
     </TouchableOpacity>
   );
 }

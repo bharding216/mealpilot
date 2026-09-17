@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { AppIcon } from '@/components/AppIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
@@ -89,7 +89,7 @@ export default function PantryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <AppIcon name="arrow.left" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Pantry</Text>
         <View style={styles.backButton} />
@@ -138,13 +138,13 @@ export default function PantryScreen() {
             }
             renderItem={({ item }) => (
               <View style={styles.pantryRow}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                <AppIcon name="checkmark.circle.fill" size={20} color={colors.primary} />
                 <Text style={styles.pantryName}>{item.name}</Text>
                 <TouchableOpacity
                   onPress={() => handleRemove(item.id, item.name)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="close-circle-outline" size={20} color={colors.textTertiary} />
+                  <AppIcon name="xmark.circle" size={20} color={colors.textTertiary} />
                 </TouchableOpacity>
               </View>
             )}
@@ -162,7 +162,7 @@ export default function PantryScreen() {
                         style={styles.chip}
                         onPress={() => handleQuickAdd(item.name, item.category)}
                       >
-                        <Ionicons name="add" size={14} color={colors.primary} />
+                        <AppIcon name="plus" size={14} color={colors.primary} />
                         <Text style={styles.chipText}>{item.name}</Text>
                       </TouchableOpacity>
                     ))}
