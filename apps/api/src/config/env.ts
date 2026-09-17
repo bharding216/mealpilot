@@ -9,8 +9,6 @@ export const env = {
 
   openaiApiKey: process.env.OPENAI_API_KEY ?? '',
 
-  hebSessionToken: process.env.HEB_SESSION_TOKEN ?? '',
-
   nodeEnv: process.env.NODE_ENV ?? 'development',
 } as const;
 
