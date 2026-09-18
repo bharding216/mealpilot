@@ -3,7 +3,9 @@ node_modules
 .env
 .env.*
 apps/mobile
+packages/heb
 scripts
 supabase
 *.md
 .cursor
+debug-screenshots

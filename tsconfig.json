@@ -10,10 +10,19 @@
     "sourceMap": true
   },
   "references": [
-    { "path": "packages/shared" },
-    { "path": "packages/heb" },
-    { "path": "apps/api" },
-    { "path": "apps/mobile" }
+    {
+      "path": "packages/shared"
+    },
+    {
+      "path": "packages/heb"
+    },
+    {
+      "path": "apps/api"
+    },
+    {
+      "path": "apps/mobile"
+    }
   ],
-  "files": []
+  "files": [],
+  "extends": "expo/tsconfig.base"
 }

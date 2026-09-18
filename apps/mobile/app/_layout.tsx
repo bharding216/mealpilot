@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { MealPlanProvider } from '@/hooks/useMealPlan';
+import { HebBridgeProvider } from '@/components/HebBridge';
 import { colors } from '@/lib/theme';
 
 function NavigationGuard({ children }: { children: React.ReactNode }) {
@@ -29,16 +30,18 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <MealPlanProvider>
-        <StatusBar style="dark" />
-        <NavigationGuard>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-              animation: 'slide_from_right',
-            }}
-          />
-        </NavigationGuard>
+        <HebBridgeProvider>
+          <StatusBar style="dark" />
+          <NavigationGuard>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background },
+                animation: 'slide_from_right',
+              }}
+            />
+          </NavigationGuard>
+        </HebBridgeProvider>
       </MealPlanProvider>
     </AuthProvider>
   );

@@ -1,82 +1,95 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
+  ScrollView,
+  Image,
 } from 'react-native';
+import { WebView, type WebViewNavigation } from 'react-native-webview';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { Button } from '@/components/Button';
-import { useHeb } from '@/hooks/useHeb';
-import { api } from '@/lib/api';
+import { useHebBridge } from '@/components/HebBridge';
 import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
-type Step = 'idle' | 'sending' | 'otp' | 'verifying';
+const HEB_SIGN_IN_URL = 'https://www.heb.com/account/sign-in';
+const CART_HASH = 'c14a956d6d675f23e63f87511bf2ce03573e2f9de29db226dadb5dca9063d3f7';
+
+type ScreenState = 'checking' | 'connected' | 'prompt' | 'webview' | 'verifying';
 
 export default function HebConnectScreen() {
-  const { session, checkSession, disconnect } = useHeb();
-  const [checking, setChecking] = useState(true);
-  const [step, setStep] = useState<Step>('idle');
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [loginId, setLoginId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const bridge = useHebBridge();
+  const loginWebViewRef = useRef<WebView>(null);
+  const [state, setState] = useState<ScreenState>('checking');
+  const [storeName, setStoreName] = useState<string | null>(null);
+  const [webViewUrl, setWebViewUrl] = useState(HEB_SIGN_IN_URL);
 
   useEffect(() => {
-    checkSession().finally(() => setChecking(false));
+    bridge.checkAuth().then((result) => {
+      if (result.authenticated) {
+        setStoreName(result.store?.name ?? null);
+        setState('connected');
+      } else {
+        setState('prompt');
+      }
+    });
   }, []);
 
-  const handleSendCode = async () => {
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address.');
-      return;
-    }
+  const verifyLogin = useCallback(async () => {
+    setState('verifying');
 
-    setStep('sending');
-    setError(null);
+    // Reload the bridge WebView so it picks up the new cookies
+    bridge.reload();
 
-    try {
-      const res = await api.post<{ loginId: string; message: string }>('/api/heb/login', { email });
-      setLoginId(res.loginId);
-      setStep('otp');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start login. Try again.');
-      setStep('idle');
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!loginId || otp.length !== 6) return;
-
-    setStep('verifying');
-    setError(null);
+    // Give the bridge time to reload and re-initialize
+    await new Promise((r) => setTimeout(r, 4000));
 
     try {
-      const res = await api.post<{ connected: boolean; store: { storeId: string; name: string } | null }>(
-        '/api/heb/verify',
-        { loginId, otp }
-      );
-
-      await checkSession();
-
-      Alert.alert(
-        'Connected! 🎉',
-        `Your H‑E‑B account is linked.${res.store ? `\n\nStore: ${res.store.name}` : ''}`,
-        [{ text: 'OK', onPress: () => router.back() }]
-      );
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Verification failed.';
-      setError(msg);
-      setStep('otp');
+      const result = await bridge.checkAuth();
+      if (result.authenticated) {
+        setStoreName(result.store?.name ?? null);
+        setState('connected');
+        Alert.alert(
+          'Connected! 🎉',
+          `Your H‑E‑B account is linked.${result.store ? `\n\nStore: ${result.store.name}` : ''}`,
+          [{ text: 'OK', onPress: () => router.back() }],
+        );
+      } else {
+        Alert.alert(
+          'Not Connected Yet',
+          'It looks like the login didn\'t complete. Make sure you\'re fully signed in on the H‑E‑B page, then tap "Done" again.',
+        );
+        setState('webview');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not verify your H‑E‑B connection. Please try again.');
+      setState('webview');
     }
-  };
+  }, [bridge]);
+
+  const handleNavigationChange = useCallback(
+    (navState: WebViewNavigation) => {
+      setWebViewUrl(navState.url);
+
+      // Detect post-login: user has been redirected back to www.heb.com (not accounts or sign-in)
+      const url = navState.url.toLowerCase();
+      const isMainSite =
+        url.includes('www.heb.com') &&
+        !url.includes('sign-in') &&
+        !url.includes('accounts.heb.com') &&
+        !url.includes('account/sign-in');
+
+      if (isMainSite && state === 'webview') {
+        verifyLogin();
+      }
+    },
+    [state, verifyLogin],
+  );
 
   const handleDisconnect = () => {
     Alert.alert('Disconnect H‑E‑B', 'This will remove your H‑E‑B connection.', [
@@ -84,16 +97,18 @@ export default function HebConnectScreen() {
       {
         text: 'Disconnect',
         style: 'destructive',
-        onPress: async () => {
-          await disconnect();
-          await checkSession();
+        onPress: () => {
+          // Clear WebView cookies for heb.com
+          bridge.reload();
+          setState('prompt');
+          setStoreName(null);
         },
       },
     ]);
   };
 
-  // ── Loading ──
-  if (checking) {
+  // ── Checking ──
+  if (state === 'checking') {
     return (
       <SafeAreaView style={styles.container}>
         <Header />
@@ -105,108 +120,111 @@ export default function HebConnectScreen() {
     );
   }
 
-  // ── Already connected ──
-  if (session?.connected) {
+  // ── Connected ──
+  if (state === 'connected') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header />
+        <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+          <View style={styles.statusCard}>
+            <AppIcon name="checkmark.circle.fill" size={48} color={colors.primary} />
+            <Text style={styles.statusTitle}>Connected to H‑E‑B</Text>
+            {storeName && (
+              <View style={styles.storeRow}>
+                <AppIcon name="storefront" size={16} color={colors.textSecondary} />
+                <Text style={styles.storeLabel}>{storeName}</Text>
+              </View>
+            )}
+          </View>
+
+          <CartTestSection />
+
+          <Button
+            title="Reconnect"
+            onPress={() => setState('webview')}
+            variant="outline"
+            style={styles.actionButton}
+          />
+          <Button
+            title="Disconnect"
+            onPress={handleDisconnect}
+            variant="outline"
+            style={styles.disconnectButton}
+          />
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Prompt (not connected) ──
+  if (state === 'prompt') {
     return (
       <SafeAreaView style={styles.container}>
         <Header />
         <View style={styles.content}>
-          <View style={styles.statusCard}>
-            <AppIcon name="checkmark.circle.fill" size={48} color={colors.primary} />
-            <Text style={styles.statusTitle}>Connected to H‑E‑B</Text>
-            {session.store && (
-              <View style={styles.storeRow}>
-                <AppIcon name="storefront" size={16} color={colors.textSecondary} />
-                <Text style={styles.storeLabel}>{session.store.name}</Text>
-              </View>
-            )}
+          <View style={styles.promptCard}>
+            <AppIcon name="storefront" size={48} color={colors.primary} />
+            <Text style={styles.promptTitle}>Connect your H‑E‑B account</Text>
+            <Text style={styles.promptDesc}>
+              Sign in to your heb.com account to search for products and add items to your H‑E‑B cart.
+            </Text>
+            <Button
+              title="Sign in to H‑E‑B"
+              onPress={() => setState('webview')}
+              style={styles.signInButton}
+            />
           </View>
-          <Button title="Reconnect" onPress={() => { setStep('idle'); }} variant="outline" style={styles.actionButton} />
-          <Button title="Disconnect" onPress={handleDisconnect} variant="outline" style={styles.disconnectButton} />
         </View>
       </SafeAreaView>
     );
   }
 
-  // ── Login flow ──
+  // ── Verifying ──
+  if (state === 'verifying') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.checkingText}>Verifying your connection...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── WebView Login ──
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
-      <KeyboardAvoidingView style={styles.content} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={styles.webViewHeader}>
+        <TouchableOpacity onPress={() => setState('prompt')} style={styles.backButton}>
+          <AppIcon name="xmark" size={20} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.webViewHeaderTitle} numberOfLines={1}>
+          Sign in to H‑E‑B
+        </Text>
+        <TouchableOpacity onPress={verifyLogin} style={styles.doneButton}>
+          <Text style={styles.doneButtonText}>Done</Text>
+        </TouchableOpacity>
+      </View>
 
-        {step === 'idle' || step === 'sending' ? (
-          // ── Email entry ──
-          <View style={styles.formCard}>
-            <AppIcon name="storefront" size={48} color={colors.primary} />
-            <Text style={styles.formTitle}>Connect your H‑E‑B account</Text>
-            <Text style={styles.formDesc}>
-              Enter the email address you use for heb.com. We'll send a one-time code to verify.
-            </Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="you@example.com"
-              placeholderTextColor={colors.textTertiary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={step !== 'sending'}
-            />
-
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
-            <Button
-              title={step === 'sending' ? 'Connecting to H‑E‑B...' : 'Send verification code'}
-              onPress={handleSendCode}
-              loading={step === 'sending'}
-              disabled={!email.includes('@')}
-              style={styles.submitButton}
-            />
-          </View>
-        ) : (
-          // ── OTP entry ──
-          <View style={styles.formCard}>
-            <AppIcon name="envelope" size={48} color={colors.primary} />
-            <Text style={styles.formTitle}>Enter verification code</Text>
-            <Text style={styles.formDesc}>
-              We sent a 6-digit code to <Text style={styles.emailHighlight}>{email}</Text>.
-              Check your email and enter it below.
-            </Text>
-
-            <TextInput
-              style={[styles.input, styles.otpInput]}
-              placeholder="000000"
-              placeholderTextColor={colors.textTertiary}
-              value={otp}
-              onChangeText={(text) => setOtp(text.replace(/[^0-9]/g, '').slice(0, 6))}
-              keyboardType="number-pad"
-              maxLength={6}
-              autoFocus
-              editable={step !== 'verifying'}
-            />
-
-            {error && <Text style={styles.errorText}>{error}</Text>}
-
-            <Button
-              title={step === 'verifying' ? 'Verifying...' : 'Verify'}
-              onPress={handleVerifyOtp}
-              loading={step === 'verifying'}
-              disabled={otp.length !== 6}
-              style={styles.submitButton}
-            />
-
-            <TouchableOpacity
-              onPress={() => { setStep('idle'); setOtp(''); setError(null); }}
-              style={styles.backLink}
-            >
-              <Text style={styles.backLinkText}>Use a different email</Text>
-            </TouchableOpacity>
+      <WebView
+        ref={loginWebViewRef}
+        source={{ uri: HEB_SIGN_IN_URL }}
+        sharedCookiesEnabled
+        thirdPartyCookiesEnabled
+        javaScriptEnabled
+        domStorageEnabled
+        onNavigationStateChange={handleNavigationChange}
+        userAgent="Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+        originWhitelist={['*']}
+        style={styles.webView}
+        startInLoadingState
+        renderLoading={() => (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={colors.primary} />
           </View>
         )}
-
-      </KeyboardAvoidingView>
+      />
     </SafeAreaView>
   );
 }
@@ -223,17 +241,312 @@ function Header() {
   );
 }
 
+// ─── Cart Test Section (for debugging/testing) ───
+
+interface SearchResult {
+  productId: string;
+  skuId: string;
+  name: string;
+  brand: string | null;
+  size: string | null;
+  price: number | null;
+  imageUrl: string | null;
+  inStock: boolean;
+}
+
+function CartTestSection() {
+  const bridge = useHebBridge();
+  const [searching, setSearching] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [cartTotal, setCartTotal] = useState<number | null>(null);
+  const [loadingCart, setLoadingCart] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+
+  const handleSearch = async (query: string) => {
+    setSearching(true);
+    try {
+      const { products, raw } = await bridge.searchProducts(query, 5);
+      console.log('[HEB Search]', query, '→', products.length, 'products');
+      if (raw) console.log('[HEB Search Raw]', raw);
+      setResults(products);
+      if (products.length === 0) {
+        Alert.alert('No Results', `No products found for "${query}". Check Expo logs for raw response.`);
+      }
+    } catch (err) {
+      console.log('[HEB Search Error]', err);
+      Alert.alert('Search Error', err instanceof Error ? err.message : 'Search failed');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleAddToCart = async (product: SearchResult) => {
+    setAdding(product.productId);
+    try {
+      const cart = await bridge.addToCart(product.productId, product.skuId, 1);
+      Alert.alert(
+        'Added to Cart! 🛒',
+        `${product.name}\n\nCart now has ${cart.itemCount} item${cart.itemCount === 1 ? '' : 's'}` +
+          (cart.estimatedTotal != null ? `\nEstimated total: $${cart.estimatedTotal.toFixed(2)}` : ''),
+      );
+      setCartTotal(cart.estimatedTotal);
+    } catch (err) {
+      Alert.alert('Cart Error', err instanceof Error ? err.message : 'Failed to add to cart');
+    } finally {
+      setAdding(null);
+    }
+  };
+
+  const handleViewCart = async () => {
+    setLoadingCart(true);
+    try {
+      const cart = await bridge.getCart();
+      setCartItems(cart.items);
+      setCartTotal(cart.estimatedTotal);
+      if (cart.items.length === 0) {
+        Alert.alert('Cart Empty', 'Your H‑E‑B cart is empty.');
+      }
+    } catch (err) {
+      Alert.alert('Cart Error', err instanceof Error ? err.message : 'Failed to load cart');
+    } finally {
+      setLoadingCart(false);
+    }
+  };
+
+  return (
+    <View style={testStyles.section}>
+      <Text style={testStyles.sectionTitle}>🧪 Test H‑E‑B Integration</Text>
+
+      {/* Quick search buttons */}
+      <View style={testStyles.searchRow}>
+        <TouchableOpacity
+          style={testStyles.searchChip}
+          onPress={() => handleSearch('milk')}
+          disabled={searching}
+        >
+          <Text style={testStyles.chipText}>🥛 Search "milk"</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={testStyles.searchChip}
+          onPress={() => handleSearch('bread')}
+          disabled={searching}
+        >
+          <Text style={testStyles.chipText}>🍞 Search "bread"</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={testStyles.searchChip}
+          onPress={() => handleSearch('chicken')}
+          disabled={searching}
+        >
+          <Text style={testStyles.chipText}>🍗 Search "chicken"</Text>
+        </TouchableOpacity>
+      </View>
+
+      {searching && (
+        <View style={testStyles.loadingRow}>
+          <ActivityIndicator size="small" color={colors.primary} />
+          <Text style={testStyles.loadingText}>Searching...</Text>
+        </View>
+      )}
+
+      {/* Search results */}
+      {results.length > 0 && (
+        <View style={testStyles.resultsList}>
+          <Text style={testStyles.resultsLabel}>
+            {results.length} product{results.length === 1 ? '' : 's'} found:
+          </Text>
+          {results.map((p) => (
+            <View key={p.productId} style={testStyles.productCard}>
+              {p.imageUrl && (
+                <Image source={{ uri: p.imageUrl }} style={testStyles.productImage} />
+              )}
+              <View style={testStyles.productInfo}>
+                <Text style={testStyles.productName} numberOfLines={2}>
+                  {p.name}
+                </Text>
+                {p.brand && <Text style={testStyles.productBrand}>{p.brand}</Text>}
+                <View style={testStyles.productPriceRow}>
+                  {p.price != null && (
+                    <Text style={testStyles.productPrice}>${p.price.toFixed(2)}</Text>
+                  )}
+                  {p.size && <Text style={testStyles.productSize}>{p.size}</Text>}
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[testStyles.addBtn, !p.inStock && testStyles.addBtnDisabled]}
+                onPress={() => handleAddToCart(p)}
+                disabled={adding !== null || !p.inStock}
+              >
+                {adding === p.productId ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <AppIcon name="plus" size={16} color="#fff" />
+                )}
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* View cart button */}
+      <TouchableOpacity style={testStyles.viewCartBtn} onPress={handleViewCart} disabled={loadingCart}>
+        {loadingCart ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
+          <>
+            <AppIcon name="cart" size={18} color={colors.primary} />
+            <Text style={testStyles.viewCartText}>View H‑E‑B Cart</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      {/* Cart items */}
+      {cartItems.length > 0 && (
+        <View style={testStyles.cartSection}>
+          <Text style={testStyles.cartTitle}>
+            Cart ({cartItems.length} item{cartItems.length === 1 ? '' : 's'})
+            {cartTotal != null && ` · $${cartTotal.toFixed(2)}`}
+          </Text>
+          {cartItems.map((item, idx) => (
+            <View key={`${item.productId}-${idx}`} style={testStyles.cartItem}>
+              {item.imageUrl && (
+                <Image source={{ uri: item.imageUrl }} style={testStyles.cartItemImage} />
+              )}
+              <View style={testStyles.cartItemInfo}>
+                <Text style={testStyles.cartItemName} numberOfLines={1}>
+                  {item.name}
+                </Text>
+                <Text style={testStyles.cartItemQty}>
+                  Qty: {item.quantity}
+                  {item.price != null && ` · $${item.price.toFixed(2)}`}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+const testStyles = StyleSheet.create({
+  section: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  searchChip: {
+    backgroundColor: colors.primaryLight + '20',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  chipText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    color: colors.primary,
+  },
+  loadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  loadingText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  resultsLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
+  resultsList: { marginBottom: spacing.md },
+  productCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  productImage: { width: 44, height: 44, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+  productInfo: { flex: 1 },
+  productName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
+  productBrand: { fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 1 },
+  productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  productPrice: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
+  productSize: { fontSize: fontSize.xs, color: colors.textTertiary },
+  addBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnDisabled: { backgroundColor: colors.textTertiary },
+  viewCartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+  },
+  viewCartText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+  cartSection: { marginTop: spacing.sm },
+  cartTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+  },
+  cartItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  cartItemImage: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+  cartItemInfo: { flex: 1 },
+  cartItemName: { fontSize: fontSize.sm, color: colors.text },
+  cartItemQty: { fontSize: fontSize.xs, color: colors.textSecondary },
+});
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surface,
   },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: {
-    flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.semibold,
-    color: colors.text, textAlign: 'center',
+    flex: 1,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    textAlign: 'center',
   },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
   checkingText: { fontSize: fontSize.sm, color: colors.textSecondary },
@@ -241,8 +554,12 @@ const styles = StyleSheet.create({
 
   // Connected state
   statusCard: {
-    backgroundColor: colors.surface, borderRadius: borderRadius.md,
-    padding: spacing.xl, alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
   },
   statusTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text },
   storeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
@@ -250,26 +567,59 @@ const styles = StyleSheet.create({
   actionButton: { marginBottom: spacing.sm },
   disconnectButton: { borderColor: colors.error },
 
-  // Form
-  formCard: {
-    backgroundColor: colors.surface, borderRadius: borderRadius.md,
-    padding: spacing.xl, alignItems: 'center', gap: spacing.md,
+  // Prompt state
+  promptCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    padding: spacing.xl,
+    alignItems: 'center',
+    gap: spacing.md,
   },
-  formTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text, textAlign: 'center' },
-  formDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  emailHighlight: { fontWeight: fontWeight.semibold, color: colors.text },
-  input: {
-    width: '100%', backgroundColor: colors.background, borderWidth: 1,
-    borderColor: colors.borderLight, borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 4,
-    fontSize: fontSize.md, color: colors.text,
-  },
-  otpInput: {
-    fontSize: fontSize.xxl, textAlign: 'center', letterSpacing: 12,
+  promptTitle: {
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
+    color: colors.text,
+    textAlign: 'center',
   },
-  submitButton: { width: '100%', marginTop: spacing.xs },
-  errorText: { fontSize: fontSize.sm, color: colors.error, textAlign: 'center' },
-  backLink: { marginTop: spacing.sm, paddingVertical: spacing.xs },
-  backLinkText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+  promptDesc: {
+    fontSize: fontSize.md,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  signInButton: { width: '100%', marginTop: spacing.xs },
+
+  // WebView state
+  webViewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    backgroundColor: colors.surface,
+  },
+  webViewHeaderTitle: {
+    flex: 1,
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text,
+    textAlign: 'center',
+  },
+  doneButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  doneButtonText: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  webView: { flex: 1 },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFill as object,
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });

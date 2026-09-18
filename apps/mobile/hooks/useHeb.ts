@@ -1,26 +1,8 @@
 import { useState, useCallback } from 'react';
+import { useHebBridge, type HebProduct, type HebCart } from '@/components/HebBridge';
 import { api } from '@/lib/api';
 
-interface HebProduct {
-  productId: string;
-  skuId: string;
-  name: string;
-  brand: string | null;
-  size: string | null;
-  price: number | null;
-  unitPrice: string | null;
-  imageUrl: string | null;
-  productUrl: string | null;
-  inStock: boolean;
-  category: string | null;
-}
-
-interface ProductMatch {
-  groceryItemId: string;
-  groceryItemName: string;
-  products: HebProduct[];
-  bestMatch: HebProduct | null;
-}
+// ─── Types ───
 
 interface GroceryItemWithMatch {
   id: string;
@@ -52,92 +34,108 @@ interface HebSession {
   lastUpdated: string | null;
 }
 
-interface CartResult {
+interface CartAddResult {
   results: Array<{ productId: string; success: boolean; error?: string }>;
-  cart: {
-    id: string;
-    items: Array<{
-      productId: string;
-      skuId: string;
-      name: string;
-      quantity: number;
-      price: number | null;
-      imageUrl: string | null;
-    }>;
-    estimatedTotal: number | null;
-    itemCount: number;
-    store: { storeId: string; name: string } | null;
-  } | null;
+  cart: HebCart | null;
 }
 
+// ─── Hook ───
+
 export function useHeb() {
+  const bridge = useHebBridge();
+
   const [session, setSession] = useState<HebSession | null>(null);
-  const [matches, setMatches] = useState<ProductMatch[]>([]);
   const [itemsWithMatches, setItemsWithMatches] = useState<GroceryItemWithMatch[]>([]);
   const [loading, setLoading] = useState(false);
   const [matching, setMatching] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const checkSession = useCallback(async () => {
+  /** Check authentication via the bridge WebView. */
+  const checkSession = useCallback(async (): Promise<HebSession> => {
     try {
-      const res = await api.get<HebSession>('/api/heb/session');
-      setSession(res);
-      return res;
+      const result = await bridge.checkAuth();
+      const s: HebSession = {
+        connected: result.authenticated,
+        store: result.store,
+        lastUpdated: new Date().toISOString(),
+      };
+      setSession(s);
+      return s;
     } catch {
-      setSession({ connected: false, store: null, lastUpdated: null });
-      return { connected: false, store: null, lastUpdated: null };
+      const s: HebSession = { connected: false, store: null, lastUpdated: null };
+      setSession(s);
+      return s;
     }
-  }, []);
+  }, [bridge]);
 
-  const saveSession = useCallback(async (cookies: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.post<HebSession>('/api/heb/session', { cookies });
-      setSession(res);
-      return res;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to connect H-E-B account';
-      setError(msg);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
+  /** Disconnect (clear cookies by reloading bridge). */
   const disconnect = useCallback(async () => {
-    try {
-      await api.delete('/api/heb/session');
-      setSession({ connected: false, store: null, lastUpdated: null });
-    } catch {
-      // ignore
-    }
-  }, []);
+    bridge.reload();
+    setSession({ connected: false, store: null, lastUpdated: null });
+  }, [bridge]);
 
-  const matchProducts = useCallback(async (mealPlanId: string) => {
-    setMatching(true);
-    setError(null);
-    try {
-      const res = await api.post<{ matches: ProductMatch[] }>(
-        `/api/grocery-list/${mealPlanId}/match-products`
-      );
-      setMatches(res.matches);
-      return res.matches;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to match products';
-      setError(msg);
-      throw err;
-    } finally {
-      setMatching(false);
-    }
-  }, []);
+  /**
+   * Match grocery items to H-E-B products.
+   * Uses the bridge for product search and the API for persistence.
+   */
+  const matchProducts = useCallback(
+    async (mealPlanId: string) => {
+      setMatching(true);
+      setError(null);
 
+      try {
+        // Get current grocery items from the API
+        const res = await api.get<{ items: GroceryItemWithMatch[] }>(
+          `/api/grocery-list/${mealPlanId}/matches`,
+        );
+        const items = res.items;
+
+        // Search H-E-B for each item via the bridge
+        for (const item of items) {
+          try {
+            const { products } = await bridge.searchProducts(item.name, 5);
+            const bestMatch = products[0];
+
+            if (bestMatch) {
+              await api.put(`/api/grocery-items/${item.id}/match`, {
+                productId: bestMatch.productId,
+                skuId: bestMatch.skuId,
+                productName: bestMatch.name,
+                brand: bestMatch.brand,
+                size: bestMatch.size,
+                price: bestMatch.price,
+                unitPrice: bestMatch.unitPrice,
+                imageUrl: bestMatch.imageUrl,
+                productUrl: bestMatch.productUrl,
+                inStock: bestMatch.inStock,
+                category: bestMatch.category,
+              });
+            }
+          } catch (err) {
+            console.warn(`Failed to match "${item.name}":`, err);
+          }
+        }
+
+        // Refetch to get the updated matches
+        await fetchMatches(mealPlanId);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to match products';
+        setError(msg);
+        throw err;
+      } finally {
+        setMatching(false);
+      }
+    },
+    [bridge],
+  );
+
+  /** Fetch stored matches from the API. */
   const fetchMatches = useCallback(async (mealPlanId: string) => {
     setLoading(true);
     try {
       const res = await api.get<{ items: GroceryItemWithMatch[] }>(
-        `/api/grocery-list/${mealPlanId}/matches`
+        `/api/grocery-list/${mealPlanId}/matches`,
       );
       setItemsWithMatches(res.items);
       return res.items;
@@ -150,67 +148,98 @@ export function useHeb() {
     }
   }, []);
 
-  const confirmMatch = useCallback(async (
-    itemId: string,
-    product: HebProduct
-  ) => {
-    try {
-      await api.put(`/api/grocery-items/${itemId}/match`, {
-        productId: product.productId,
-        skuId: product.skuId,
-        productName: product.name,
-        brand: product.brand,
-        size: product.size,
-        price: product.price,
-        unitPrice: product.unitPrice,
-        imageUrl: product.imageUrl,
-        productUrl: product.productUrl,
-        inStock: product.inStock,
-        category: product.category,
-      });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to update match';
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  /** Save/update a product match via the API. */
+  const confirmMatch = useCallback(
+    async (itemId: string, product: HebProduct) => {
+      try {
+        await api.put(`/api/grocery-items/${itemId}/match`, {
+          productId: product.productId,
+          skuId: product.skuId,
+          productName: product.name,
+          brand: product.brand,
+          size: product.size,
+          price: product.price,
+          unitPrice: product.unitPrice,
+          imageUrl: product.imageUrl,
+          productUrl: product.productUrl,
+          inStock: product.inStock,
+          category: product.category,
+        });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to update match';
+        setError(msg);
+        throw err;
+      }
+    },
+    [],
+  );
 
-  const searchProducts = useCallback(async (query: string) => {
-    const res = await api.get<{ products: HebProduct[] }>(
-      `/api/heb/search?q=${encodeURIComponent(query)}&limit=5`
-    );
-    return res.products;
-  }, []);
+  /** Search H-E-B products via the bridge. */
+  const searchProducts = useCallback(
+    async (query: string) => {
+      const { products } = await bridge.searchProducts(query, 5);
+      return products;
+    },
+    [bridge],
+  );
 
-  const addToCart = useCallback(async (
-    items: Array<{ productId: string; skuId: string; quantity?: number; groceryItemId?: string }>
-  ) => {
-    setAddingToCart(true);
-    setError(null);
-    try {
-      const res = await api.post<CartResult>('/api/heb/cart/add', {
-        items: items.map((i) => ({
-          productId: i.productId,
-          skuId: i.skuId,
-          quantity: i.quantity ?? 1,
-          groceryItemId: i.groceryItemId,
-        })),
-      });
-      return res;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to add items to cart';
-      setError(msg);
-      throw err;
-    } finally {
-      setAddingToCart(false);
-    }
-  }, []);
+  /**
+   * Add items to the H-E-B cart via the bridge,
+   * then update match statuses via the API.
+   */
+  const addToCart = useCallback(
+    async (
+      items: Array<{
+        productId: string;
+        skuId: string;
+        quantity?: number;
+        groceryItemId?: string;
+      }>,
+    ): Promise<CartAddResult> => {
+      setAddingToCart(true);
+      setError(null);
 
+      try {
+        const results: CartAddResult['results'] = [];
+        let latestCart: HebCart | null = null;
+
+        for (const item of items) {
+          try {
+            latestCart = await bridge.addToCart(
+              item.productId,
+              item.skuId,
+              item.quantity ?? 1,
+            );
+
+            // Update match status in the database
+            if (item.groceryItemId) {
+              await api.post('/api/grocery-items/update-status', {
+                updates: [{ groceryItemId: item.groceryItemId, status: 'in_cart' }],
+              }).catch(() => {
+                // Non-critical: match status update failed, cart add succeeded
+              });
+            }
+
+            results.push({ productId: item.productId, success: true });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            results.push({ productId: item.productId, success: false, error: msg });
+          }
+        }
+
+        return { results, cart: latestCart };
+      } finally {
+        setAddingToCart(false);
+      }
+    },
+    [bridge],
+  );
+
+  /** Get the current H-E-B cart via the bridge. */
   const getCart = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get<{ cart: CartResult['cart'] }>('/api/heb/cart');
-      return res.cart;
+      return await bridge.getCart();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load cart';
       setError(msg);
@@ -218,18 +247,16 @@ export function useHeb() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [bridge]);
 
   return {
     session,
-    matches,
     itemsWithMatches,
     loading,
     matching,
     addingToCart,
     error,
     checkSession,
-    saveSession,
     disconnect,
     matchProducts,
     fetchMatches,
