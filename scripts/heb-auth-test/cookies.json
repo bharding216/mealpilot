@@ -1,0 +1,286 @@
+[
+  {
+    "name": "loginEmail",
+    "value": "brandonaharding%40gmail.com",
+    "domain": "accounts.heb.com",
+    "path": "/interaction/WeQkkOjvhs5zFO0xPKrjy",
+    "expires": 1789698567.512904,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_interaction",
+    "value": "iVSuhE66hpQhw9XbswAsS",
+    "domain": "accounts.heb.com",
+    "path": "/interaction/WeQkkOjvhs5zFO0xPKrjy",
+    "expires": 1789701918.231714,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_interaction.sig",
+    "value": "QsH_cBWx4qHF0_fD0FDyDwUulVI",
+    "domain": "accounts.heb.com",
+    "path": "/interaction/WeQkkOjvhs5zFO0xPKrjy",
+    "expires": 1789701918.231806,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "visid_incap_2302070",
+    "value": "WByAQUCDRniT1luN/Ibw6dKgrGoAAAAAQUIPAAAAAACIE8i62OS2uYEZSLB5pWnx",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1821166080,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "incap_ses_205_2302070",
+    "value": "9nlEAKg5FUteu7tRD0/YAtKgrGoAAAAAhL7AWruVNS2aOkUx6yoJxw==",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "reese84",
+    "value": "3:6C40VeOS1V28ARM4TULtWw==:17Bhid/zKnhI+abYE4I2MOUZWFu4TKlXAJUnMydQL0YBjnqt95t96n2zrY3zZyfQQ3fC7q7515OkP7eYEN6zE/ibz4SAU9gqIizi1UFsyGfXNfzxBVdFPBbJR7hDWgt9HSDHTJUmULm+PZ7yRwF2vTTHlzo+TDEIgmsh1KupkDs=:kaZeZ+xejQAs28cRzsl7vOETWasH0eB3iGkcvAzfN9M=:xKDCH3DLRm5+6vFMbP78vTX6JYPIT0hHw35imoIQuQSnQh8PuiLZGF6i6Y/x4LMr9MBDikik/OPsb8Tut6C7pKPPqdDppn8kvq/2mKEg59tJowNmymG7rBNi90yaeTNovROFl06NfFlMikcEK+dDrH57cyZoRHW5wK5ZElau3ee04LSGY5nDkzEW7eaE578IKr8889dqU/FhIRGNnLqIjDTZmp9jv/s7exy0IDOnl8p/CtkIQoy1C9shy2ciwBRH70vyvlmlPnKpS+vXziPT5oVj7J8dfnKmx5UculYX1nrSjR/tfRUaXp9IEORXzGp5xFGl2mwWT7NUKFVyuWS3I//cVfYrbwK+Jd9preriKkgWuCJBQ4pMi46mAdboYsiiO6pzdSg=:",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1792290323.656098,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None",
+    "partitionKey": "https://heb.com",
+    "_crHasCrossSiteAncestor": false
+  },
+  {
+    "name": "HEB_AMP_DEVICE_ID",
+    "value": "h-9ac85c14-d38e-4100-bd31-05e7abcf18ec",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1821234260.151348,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "HEB_AMP_SESSION_ID",
+    "value": "1789698260227",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1789700125.626604,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "sst",
+    "value": "hs:sst:3p6bo-tDHqVa8dqsiQ4Ft",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1821255860.151661,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "sst.sig",
+    "value": "fVuzCITvnH-camfqWd2UY8wGPebjeW9LJsvKmmiCRSc",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1821255860.151762,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.567491548.1789698261",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1824258323.921564,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_dvcid",
+    "value": "65dc70d5-2867-48bf-969d-bf839fa16ee7",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1824258322.543087,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "visid_incap_2576970",
+    "value": "NZ/zUrKIRImdeKS/lZ0jXNagrGoAAAAAQUIPAAAAAABgItZmtGken0ayvy9D5FTG",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1821162583.927803,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "incap_ses_8220_2576970",
+    "value": "tcUfboB4gj3nebnJI08TctegrGoAAAAA0T2m2qImpO7HJ8CGIe68pg==",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": -1,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "reese84",
+    "value": "3:6C40VeOS1V28ARM4TULtWw==:17Bhid/zKnhI+abYE4I2MOUZWFu4TKlXAJUnMydQL0YBjnqt95t96n2zrY3zZyfQQ3fC7q7515OkP7eYEN6zE/ibz4SAU9gqIizi1UFsyGfXNfzxBVdFPBbJR7hDWgt9HSDHTJUmULm+PZ7yRwF2vTTHlzo+TDEIgmsh1KupkDs=:kaZeZ+xejQAs28cRzsl7vOETWasH0eB3iGkcvAzfN9M=:xKDCH3DLRm5+6vFMbP78vTX6JYPIT0hHw35imoIQuQSnQh8PuiLZGF6i6Y/x4LMr9MBDikik/OPsb8Tut6C7pKPPqdDppn8kvq/2mKEg59tJowNmymG7rBNi90yaeTNovROFl06NfFlMikcEK+dDrH57cyZoRHW5wK5ZElau3ee04LSGY5nDkzEW7eaE578IKr8889dqU/FhIRGNnLqIjDTZmp9jv/s7exy0IDOnl8p/CtkIQoy1C9shy2ciwBRH70vyvlmlPnKpS+vXziPT5oVj7J8dfnKmx5UculYX1nrSjR/tfRUaXp9IEORXzGp5xFGl2mwWT7NUKFVyuWS3I//cVfYrbwK+Jd9preriKkgWuCJBQ4pMi46mAdboYsiiO6pzdSg=:",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1792290319.600087,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "None",
+    "partitionKey": "https://heb.com",
+    "_crHasCrossSiteAncestor": false
+  },
+  {
+    "name": "_iidt",
+    "value": "50ZxEUMqsbXtn+8TY2VfEKDaRU0alR6ZMp0RBnDSq9bqmPnWVgpXcM6xsXEPcq651WJN3duKqbwxzzhfkqIeUX79t6soEgTgtjbp43qcFRQXsnB3nj1k",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1821234267.252015,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_uad",
+    "value": "eyJhbGciOiJQUzI1NiIsImtpZCI6Ilc2NkgyNnVWZHN6UTdqemFRenFJbGV5cDE1RFk0akl1NTRMVVczN3FIcFEifQ.eyJiaWQiOiJhNGM1MjI4Yi0yMjc4LTQxNjUtODAzMi02ZGM4NGM4M2E5ZmUiLCJleHQiOiI5akY0eU9kWm4xcmMwb2pSWXFsMCIsImlhdCI6MTc4OTY5ODMxOH0.-OnShcvV2o7nmPSbPl9selyyIzOY1sw9POYah6N1ly1bq39pzLT3aYILZdBGjtNl5dTKDwb2zu-CdHi_5XD2JfZMwj-JjlEMA8n-9mTz_1b6FtlBSTszyzlEzTKAzBlhfEI9sG4xsZC2JRkJ7jos4tAJWQqFb-tamkFOzmTicAHpDDlTUwHz9fa5wLW4IICNZZ3zFOUpUhh5b4_GxhweWPDv3Nd0Ki7dhO3k7ijUBl5pSUNEBoQpsdBCkqKeuir5qxx61dEzV_vCmdImbqhrsMMAUmvExDly1Dzv4W7GNXdrGby6eIJfUqakFoDie91jebHKlZotwsSR4qNHW6B0Vg",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1824258317.921599,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_pk_prompted",
+    "value": "1",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1792290322.241667,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_session",
+    "value": "DBY5vY5lTXHfwNiQIJ7kq",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1792290322.543479,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_session.sig",
+    "value": "3iRo8aiAc7jGOHgz-07WyCStUZs",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1792290322.543605,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_session.legacy",
+    "value": "DBY5vY5lTXHfwNiQIJ7kq",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1792290322.543731,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_session.legacy.sig",
+    "value": "johgQLtMCRKeKpB1rQj8i0z1LJc",
+    "domain": "accounts.heb.com",
+    "path": "/",
+    "expires": 1792290322.543849,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "wa-pc",
+    "value": "0",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1789700122.844696,
+    "httpOnly": false,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "sat",
+    "value": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImZqdW52cmpiUThSbkQtNWIwVzJod0F6SkJPZ1lWNnpLaWVOMnpHUjBjdFEifQ.eyJnaWd5YV91aWQiOiJiODEzNmRjOTljYTc0NDk3YWM3OTFlNjY2NTA0NjgwMSIsInVhaWQiOiJ1bmtub3duIiwianRpIjoicHFOMmFibGdKaXA4YlRfT1R6akRNIiwic3ViIjoiNjkzMjQwMjE1MzU1OTkzNDg5MTI0MjAxMjUiLCJpYXQiOjE3ODk2OTgzMjIsImV4cCI6MTc4OTcwMDEyMiwiY2xpZW50X2lkIjoid3d3LmhlYi5jb20iLCJpc3MiOiJwcmQtaGViLWF1dGguaGViLWVjb20taWRwLXByZC5hd3MuaGViLmludGVybmFsIiwiYXVkIjoid3d3LmhlYi5jb20iLCJiaWQiOiJtNl9MNEk3OV9UcW5BZFlWNWhPTlNfNmpDaUs5VTRCbW44TFAzUHVvSEVGIiwiYWF0IjoxNzg5Njk4MzE3fQ.q2hig7RdOZlVgaEE3fH3LZivnGgsGs2ndvo1FrfrJYUpD5ZkInO0dsm_utqtDokLHxFUpQ2yhMEcEPkzXvqFmWE-GNoHO38FZa8ZcJGGRG1NIIKJJVwq77WsxJ_gwptMh0qMbMPeFQndb9_tF5k1NiqcumOgDtJrrxdor5PEa9aWm79ksGUuf9wVOKNc2S5X-f0jj3Ukh68w-GIyWDbkwc9MMKtMa7M7TkUQnbFMRB5xzqXLtTKSHOTBZ07PdJOV_4jcC4HmFKGsL4Bqk3mmweFxBaegC6tjtv7taRinVwxLcHkvak4wPHXeYcLQRDDe84nDoo5ITJn0SFAuPZ2SyooUN5-WJ-4q65j9xmfIqV-5r_9SkkSb1Tuo-ccOxVTfXUOLoYDPwr-UU5ViSZCN2dr2m-VmvbVVXQHS-o8vVCosXyaDeRHvseltQt_3UTt9z_yLOJZcf-wh2P_2YHCD0aU2Ry9T3elQA2J5PkNQEKLNVgEnh_qVqHpCrvt-UbD7",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1794882322.844766,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "AMP_760524e2ba",
+    "value": "JTdCJTIyZGV2aWNlSWQlMjIlM0ElMjJoLTlhYzg1YzE0LWQzOGUtNDEwMC1iZDMxLTA1ZTdhYmNmMThlYyUyMiUyQyUyMnVzZXJJZCUyMiUzQSUyMjY5MzI0MDIxNTM1NTk5MzQ4OTEyNDIwMTI1JTIyJTJDJTIyc2Vzc2lvbklkJTIyJTNBMTc4OTY5ODI2MDIyNyUyQyUyMm9wdE91dCUyMiUzQWZhbHNlJTJDJTIybGFzdEV2ZW50VGltZSUyMiUzQTE3ODk2OTgzMjM2MTklMkMlMjJsYXN0RXZlbnRJZCUyMiUzQTklMkMlMjJwYWdlQ291bnRlciUyMiUzQTAlMkMlMjJjb29raWVEb21haW4lMjIlM0ElMjIuaGViLmNvbSUyMiU3RA==",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1821234323,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga_WKSH6HYPT4",
+    "value": "GS2.1.s1789698261$o1$g1$t1789698323$j60$l1$h766779010",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1824258323.92088,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "OptanonConsent",
+    "value": "isGpcEnabled=0&datestamp=Thu+Sep+17+2026+21%3A25%3A24+GMT-0500+(Central+Daylight+Time)&version=202405.2.0&browserGpcFlag=0&isIABGlobal=false&hosts=&consentId=25d4635f-667f-4df0-a9b2-2b02e5a29628&interactionCount=1&isAnonUser=1&landingPath=https%3A%2F%2Fwww.heb.com%2Faccount%2Fsign-in&groups=C0004%3A1",
+    "domain": ".heb.com",
+    "path": "/",
+    "expires": 1821234324,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_dd_s",
+    "value": "aid=fb87c47a-ad3c-4ec3-aa53-67d363c86c29&rum=2&id=b17ac788-e4c2-4890-b7dc-38cf72bc4193&created=1789698260560&expire=1789699231698",
+    "domain": "www.heb.com",
+    "path": "/",
+    "expires": 1821234331,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Strict"
+  }
+]

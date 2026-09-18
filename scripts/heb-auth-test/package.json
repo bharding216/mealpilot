@@ -1,0 +1,14 @@
+{
+  "name": "heb-auth-test",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test-auth.mjs",
+    "test:pw": "node test-auth-playwright.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.52.0",
+    "tough-cookie": "^5.1.2"
+  }
+}

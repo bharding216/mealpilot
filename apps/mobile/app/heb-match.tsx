@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,26 +17,6 @@ import { useHeb } from '@/hooks/useHeb';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
-interface MatchedItem {
-  id: string;
-  name: string;
-  quantity: number | null;
-  unit: string | null;
-  product_matches: Array<{
-    id: string;
-    product_id: string;
-    sku_id: string;
-    product_name: string;
-    brand: string | null;
-    size: string | null;
-    price: number | null;
-    unit_price: string | null;
-    image_url: string | null;
-    in_stock: boolean;
-    status: string;
-  }>;
-}
-
 export default function HebMatchScreen() {
   const { mealPlanId } = useLocalSearchParams<{ mealPlanId: string }>();
   const { currentPlan } = useMealPlan();
@@ -53,7 +33,6 @@ export default function HebMatchScreen() {
   } = useHeb();
 
   const [loading, setLoading] = useState(true);
-
   const planId = mealPlanId ?? currentPlan?.id;
 
   useEffect(() => {
@@ -67,7 +46,7 @@ export default function HebMatchScreen() {
     init();
   }, [planId]);
 
-  const handleMatch = async () => {
+  const handleMatch = useCallback(async () => {
     if (!planId) return;
     try {
       await matchProducts(planId);
@@ -75,49 +54,43 @@ export default function HebMatchScreen() {
     } catch {
       Alert.alert('Error', 'Failed to match products. Please try again.');
     }
-  };
+  }, [planId, matchProducts, fetchMatches]);
 
-  const handleAddAllToCart = async () => {
-    const itemsToAdd = itemsWithMatches
-      .filter((item) => item.product_matches.length > 0 && item.product_matches[0].in_stock)
-      .map((item) => ({
-        productId: item.product_matches[0].product_id,
-        skuId: item.product_matches[0].sku_id,
+  const handleAddAllToCart = useCallback(async () => {
+    const items = itemsWithMatches
+      .filter((i) => i.product_matches.length > 0 && i.product_matches[0].in_stock)
+      .map((i) => ({
+        productId: i.product_matches[0].product_id,
+        skuId: i.product_matches[0].sku_id,
         quantity: 1,
-        groceryItemId: item.id,
+        groceryItemId: i.id,
       }));
 
-    if (itemsToAdd.length === 0) {
+    if (items.length === 0) {
       Alert.alert('No items', 'No matched products to add to cart.');
       return;
     }
 
     Alert.alert(
       'Add to H‑E‑B Cart',
-      `Add ${itemsToAdd.length} item${itemsToAdd.length === 1 ? '' : 's'} to your H‑E‑B cart?`,
+      `Add ${items.length} item${items.length === 1 ? '' : 's'} to your H‑E‑B cart?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Add to Cart',
           onPress: async () => {
             try {
-              const result = await addToCart(itemsToAdd);
+              const result = await addToCart(items);
               const succeeded = result.results.filter((r) => r.success).length;
               const failed = result.results.filter((r) => !r.success).length;
 
               if (failed === 0) {
-                Alert.alert(
-                  'Added to Cart! 🛒',
-                  `${succeeded} item${succeeded === 1 ? '' : 's'} added to your H‑E‑B cart.${
-                    result.cart?.estimatedTotal
-                      ? `\n\nEstimated total: $${result.cart.estimatedTotal.toFixed(2)}`
-                      : ''
-                  }`,
+                Alert.alert('Added to Cart! 🛒',
+                  `${succeeded} item${succeeded === 1 ? '' : 's'} added to your H‑E‑B cart.`,
                   [{ text: 'OK', onPress: () => fetchMatches(planId!) }]
                 );
               } else {
-                Alert.alert(
-                  'Partially Added',
+                Alert.alert('Partially Added',
                   `${succeeded} added, ${failed} failed. Check product availability.`,
                   [{ text: 'OK', onPress: () => fetchMatches(planId!) }]
                 );
@@ -129,7 +102,7 @@ export default function HebMatchScreen() {
         },
       ]
     );
-  };
+  }, [itemsWithMatches, addToCart, fetchMatches, planId]);
 
   // Not connected
   if (!loading && !session?.connected) {
@@ -142,11 +115,7 @@ export default function HebMatchScreen() {
           <Text style={styles.emptyDesc}>
             Link your H‑E‑B account to match grocery items to real products and add them to your cart.
           </Text>
-          <Button
-            title="Connect H‑E‑B"
-            onPress={() => router.push('/heb-connect')}
-            style={styles.connectButton}
-          />
+          <Button title="Connect H‑E‑B" onPress={() => router.push('/heb-connect')} style={styles.connectButton} />
         </View>
       </SafeAreaView>
     );
@@ -186,9 +155,7 @@ export default function HebMatchScreen() {
   }
 
   const matchedCount = itemsWithMatches.filter((i) => i.product_matches.length > 0).length;
-  const inCartCount = itemsWithMatches.filter(
-    (i) => i.product_matches.some((m) => m.status === 'in_cart')
-  ).length;
+  const inCartCount = itemsWithMatches.filter((i) => i.product_matches.some((m) => m.status === 'in_cart')).length;
   const estimatedTotal = itemsWithMatches.reduce((sum, item) => {
     const match = item.product_matches[0];
     return sum + (match?.price ?? 0);
@@ -198,16 +165,11 @@ export default function HebMatchScreen() {
     <SafeAreaView style={styles.container}>
       <Header />
 
-      {/* Summary bar */}
       <View style={styles.summaryBar}>
         <View>
-          <Text style={styles.summaryTitle}>
-            {matchedCount} of {itemsWithMatches.length} matched
-          </Text>
+          <Text style={styles.summaryTitle}>{matchedCount} of {itemsWithMatches.length} matched</Text>
           {estimatedTotal > 0 && (
-            <Text style={styles.summarySubtitle}>
-              Est. total: ${estimatedTotal.toFixed(2)}
-            </Text>
+            <Text style={styles.summarySubtitle}>Est. total: ${estimatedTotal.toFixed(2)}</Text>
           )}
         </View>
         {session?.store && (
@@ -233,7 +195,6 @@ export default function HebMatchScreen() {
         ItemSeparatorComponent={() => <View style={styles.separator} />}
       />
 
-      {/* Footer actions */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.rematchButton} onPress={handleMatch}>
           <AppIcon name="arrow.clockwise" size={16} color={colors.primary} />
@@ -241,11 +202,9 @@ export default function HebMatchScreen() {
         </TouchableOpacity>
         <Button
           title={
-            addingToCart
-              ? 'Adding...'
-              : inCartCount === matchedCount
-                ? 'All in Cart ✓'
-                : `Add ${matchedCount - inCartCount} to H‑E‑B Cart`
+            addingToCart ? 'Adding...'
+              : inCartCount === matchedCount ? 'All in Cart ✓'
+              : `Add ${matchedCount - inCartCount} to H‑E‑B Cart`
           }
           onPress={handleAddAllToCart}
           loading={addingToCart}
@@ -269,7 +228,7 @@ function Header() {
   );
 }
 
-function MatchedItemRow({ item }: { item: MatchedItem }) {
+function MatchedItemRow({ item }: { item: any }) {
   const match = item.product_matches[0];
   const isInCart = match?.status === 'in_cart';
 
@@ -283,7 +242,6 @@ function MatchedItemRow({ item }: { item: MatchedItem }) {
           </Text>
         )}
       </View>
-
       {match ? (
         <View style={styles.productRow}>
           {match.image_url ? (
@@ -294,28 +252,16 @@ function MatchedItemRow({ item }: { item: MatchedItem }) {
             </View>
           )}
           <View style={styles.productInfo}>
-            <Text style={styles.productName} numberOfLines={2}>
-              {match.product_name}
-            </Text>
+            <Text style={styles.productName} numberOfLines={2}>{match.product_name}</Text>
             <View style={styles.productMeta}>
-              {match.brand && (
-                <Text style={styles.productBrand}>{match.brand}</Text>
-              )}
-              {match.size && (
-                <Text style={styles.productSize}>{match.size}</Text>
-              )}
+              {match.brand && <Text style={styles.productBrand}>{match.brand}</Text>}
+              {match.size && <Text style={styles.productSize}>{match.size}</Text>}
             </View>
             <View style={styles.productPriceRow}>
-              {match.price != null && (
-                <Text style={styles.productPrice}>${match.price.toFixed(2)}</Text>
-              )}
-              {match.unit_price && (
-                <Text style={styles.productUnitPrice}>{match.unit_price}</Text>
-              )}
+              {match.price != null && <Text style={styles.productPrice}>${match.price.toFixed(2)}</Text>}
+              {match.unit_price && <Text style={styles.productUnitPrice}>{match.unit_price}</Text>}
               {!match.in_stock && (
-                <View style={styles.outOfStockBadge}>
-                  <Text style={styles.outOfStockText}>Out of stock</Text>
-                </View>
+                <View style={styles.outOfStockBadge}><Text style={styles.outOfStockText}>Out of stock</Text></View>
               )}
               {isInCart && (
                 <View style={styles.inCartBadge}>
@@ -339,89 +285,28 @@ function MatchedItemRow({ item }: { item: MatchedItem }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2, borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
   },
   backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: {
-    flex: 1,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
-    gap: spacing.md,
-  },
-  emptyTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  emptyDesc: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
+  headerTitle: { flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, textAlign: 'center' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2, gap: spacing.md },
+  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginTop: spacing.md },
+  emptyDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
   connectButton: { minWidth: 200, marginTop: spacing.sm },
-  summaryBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
+  summaryBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
   summaryTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
   summarySubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
-  storeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    gap: 4,
-    maxWidth: 160,
-  },
+  storeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.full, gap: 4, maxWidth: 160 },
   storeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  errorBanner: {
-    backgroundColor: colors.error + '15',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
+  errorBanner: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.sm, borderRadius: borderRadius.sm },
   errorText: { fontSize: fontSize.sm, color: colors.error },
   listContent: { padding: spacing.md, paddingBottom: spacing.xxl },
   separator: { height: spacing.sm },
-  itemCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
+  itemCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md },
   itemCardInCart: { opacity: 0.7 },
-  ingredientRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
+  ingredientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   ingredientName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text, flex: 1 },
   ingredientQty: { fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.sm },
   productRow: { flexDirection: 'row', gap: spacing.sm },
@@ -435,46 +320,14 @@ const styles = StyleSheet.create({
   productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
   productPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
   productUnitPrice: { fontSize: fontSize.xs, color: colors.textTertiary },
-  outOfStockBadge: {
-    backgroundColor: colors.error + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
+  outOfStockBadge: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
   outOfStockText: { fontSize: fontSize.xs, color: colors.error, fontWeight: fontWeight.medium },
-  inCartBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: colors.primaryLight + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.full,
-  },
+  inCartBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.full },
   inCartText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  noMatchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
+  noMatchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   noMatchText: { fontSize: fontSize.sm, color: colors.textTertiary },
-  footer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    backgroundColor: colors.surface,
-    gap: spacing.md,
-  },
-  rematchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
+  footer: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.surface, gap: spacing.md },
+  rematchButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   rematchText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
   addButton: { flex: 1 },
 });

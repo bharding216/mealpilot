@@ -4,9 +4,17 @@ import { authMiddleware } from '../middleware/auth.js';
 import { supabaseAdmin } from '../db/supabase.js';
 import { HebGroceryProvider } from '@mealpilot/heb';
 import type { GroceryProviderProduct } from '@mealpilot/heb';
+import { initLogin, verifyOtp, cancelLogin } from '../services/heb-auth.js';
 
-const saveSessionSchema = z.object({
-  cookies: z.string().min(1),
+// ─── Schemas ───
+
+const loginSchema = z.object({
+  email: z.string().email(),
+});
+
+const verifySchema = z.object({
+  loginId: z.string().min(1),
+  otp: z.string().regex(/^\d{6}$/, 'OTP must be exactly 6 digits'),
 });
 
 const matchProductsSchema = z.object({
@@ -36,31 +44,43 @@ const addToCartSchema = z.object({
   })),
 });
 
+// ─── Helpers ───
+
 async function getHebClient(userId: string): Promise<HebGroceryProvider> {
   const { data: session } = await supabaseAdmin
     .from('heb_sessions')
-    .select('cookies')
+    .select('cookies, hashes')
     .eq('user_id', userId)
     .single();
 
   if (!session?.cookies) {
-    throw Object.assign(new Error('H-E-B session not found. Please connect your H-E-B account first.'), { statusCode: 401 });
+    throw Object.assign(
+      new Error('H-E-B session not found. Please connect your H-E-B account first.'),
+      { statusCode: 401 }
+    );
   }
 
-  const client = new HebGroceryProvider();
+  const hashes = typeof session.hashes === 'object' && session.hashes
+    ? session.hashes as Record<string, string>
+    : undefined;
+
+  const client = new HebGroceryProvider(hashes);
   client.setSession(session.cookies);
   return client;
 }
 
+// ─── Routes ───
+
 export async function hebRoutes(app: FastifyInstance): Promise<void> {
   app.addHook('onRequest', authMiddleware);
 
-  // ─── Session Management ───
+  // ────────────────────────────────────────────────────────────────────
+  //  Session / Authentication
+  // ────────────────────────────────────────────────────────────────────
 
-  // Check if user has an active HEB session
+  /** Check if the user has an active H-E-B session. */
   app.get('/api/heb/session', async (request) => {
     const userId = request.user!.id;
-
     const { data: session } = await supabaseAdmin
       .from('heb_sessions')
       .select('store_id, store_name, updated_at')
@@ -69,91 +89,129 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
 
     return {
       connected: !!session,
-      store: session?.store_id ? {
-        storeId: session.store_id,
-        name: session.store_name,
-      } : null,
+      store: session?.store_id
+        ? { storeId: session.store_id, name: session.store_name }
+        : null,
       lastUpdated: session?.updated_at ?? null,
     };
   });
 
-  // Save HEB session cookies (from the user's browser login)
-  app.post('/api/heb/session', async (request, reply) => {
-    const body = saveSessionSchema.safeParse(request.body);
+  /**
+   * Step 1 — Start H-E-B login.
+   * Launches a headless browser, enters the email, triggers OTP.
+   * Returns a loginId the client uses for step 2.
+   */
+  app.post('/api/heb/login', async (request, reply) => {
+    const body = loginSchema.safeParse(request.body);
     if (!body.success) {
       return reply.code(400).send({
         error: 'Bad Request',
-        message: 'Invalid session data',
+        message: 'A valid email is required.',
         statusCode: 400,
       });
     }
-
-    const userId = request.user!.id;
-
-    // Test the cookies by fetching the cart (also gets store info)
-    const client = new HebGroceryProvider();
-    client.setSession(body.data.cookies);
-
-    let storeId: string | null = null;
-    let storeName: string | null = null;
 
     try {
-      const cart = await client.getCart();
-      if (cart.store) {
-        storeId = cart.store.storeId;
-        storeName = cart.store.name;
-      }
+      const { loginId } = await initLogin(body.data.email);
+      return { loginId, message: 'OTP sent. Check your email.' };
     } catch (err) {
-      request.log.error({ err }, 'HEB session validation failed');
+      request.log.error({ err }, 'H-E-B login initiation failed');
+      return reply.code(502).send({
+        error: 'H-E-B Login Failed',
+        message: err instanceof Error ? err.message : 'Could not connect to H-E-B.',
+        statusCode: 502,
+      });
+    }
+  });
+
+  /**
+   * Step 2 — Verify OTP.
+   * Submits the OTP to H-E-B, extracts cookies, stores them encrypted.
+   */
+  app.post('/api/heb/verify', async (request, reply) => {
+    const body = verifySchema.safeParse(request.body);
+    if (!body.success) {
       return reply.code(400).send({
         error: 'Bad Request',
-        message: 'Invalid H-E-B session. Please try logging in again.',
+        message: 'loginId and a 6-digit OTP are required.',
         statusCode: 400,
       });
     }
 
-    // Upsert the session
-    const { data: existing } = await supabaseAdmin
-      .from('heb_sessions')
-      .select('id')
-      .eq('user_id', userId)
-      .single();
+    try {
+      const result = await verifyOtp(body.data.loginId, body.data.otp);
+      const userId = request.user!.id;
 
-    if (existing) {
-      await supabaseAdmin
+      // Upsert session
+      const { data: existing } = await supabaseAdmin
         .from('heb_sessions')
-        .update({ cookies: body.data.cookies, store_id: storeId, store_name: storeName })
-        .eq('user_id', userId);
-    } else {
-      await supabaseAdmin
-        .from('heb_sessions')
-        .insert({ user_id: userId, cookies: body.data.cookies, store_id: storeId, store_name: storeName });
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      const sessionData = {
+        cookies: result.cookies,
+        hashes: result.hashes,
+        store_id: result.storeId,
+        store_name: result.storeName,
+      };
+
+      if (existing) {
+        await supabaseAdmin.from('heb_sessions').update(sessionData).eq('user_id', userId);
+      } else {
+        await supabaseAdmin.from('heb_sessions').insert({ user_id: userId, ...sessionData });
+      }
+
+      return {
+        connected: true,
+        store: result.storeId
+          ? { storeId: result.storeId, name: result.storeName }
+          : null,
+      };
+    } catch (err) {
+      request.log.error({ err }, 'H-E-B OTP verification failed');
+      const msg = err instanceof Error ? err.message : 'Verification failed';
+
+      // If OTP was wrong, return 401
+      if (msg.includes('sat cookie not found') || msg.includes('incorrect')) {
+        return reply.code(401).send({
+          error: 'Verification Failed',
+          message: 'OTP may be incorrect or expired. Please try again.',
+          statusCode: 401,
+        });
+      }
+
+      return reply.code(502).send({
+        error: 'H-E-B Verification Failed',
+        message: msg,
+        statusCode: 502,
+      });
     }
-
-    return {
-      connected: true,
-      store: storeId ? { storeId, name: storeName } : null,
-    };
   });
 
-  // Disconnect HEB session
+  /** Cancel an in-progress login. */
+  app.delete('/api/heb/login/:loginId', async (request) => {
+    const { loginId } = request.params as { loginId: string };
+    cancelLogin(loginId);
+    return { cancelled: true };
+  });
+
+  /** Disconnect H-E-B session. */
   app.delete('/api/heb/session', async (request) => {
     const userId = request.user!.id;
     await supabaseAdmin.from('heb_sessions').delete().eq('user_id', userId);
     return { connected: false };
   });
 
-  // ─── Product Search & Matching ───
+  // ────────────────────────────────────────────────────────────────────
+  //  Product Search & Matching
+  // ────────────────────────────────────────────────────────────────────
 
-  // Search HEB products directly
+  /** Search H-E-B products. */
   app.get('/api/heb/search', async (request, reply) => {
     const { q, limit } = request.query as { q?: string; limit?: string };
     if (!q) {
-      return reply.code(400).send({
-        error: 'Bad Request',
-        message: 'Query parameter "q" is required',
-        statusCode: 400,
-      });
+      return reply.code(400).send({ error: 'Bad Request', message: '"q" is required', statusCode: 400 });
     }
 
     const userId = request.user!.id;
@@ -162,13 +220,25 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
     return { products };
   });
 
-  // Auto-match grocery list items to HEB products
+  /** Typeahead suggestions (just search terms, not full products). */
+  app.get('/api/heb/typeahead', async (request, reply) => {
+    const { q } = request.query as { q?: string };
+    if (!q) {
+      return reply.code(400).send({ error: 'Bad Request', message: '"q" is required', statusCode: 400 });
+    }
+
+    const userId = request.user!.id;
+    const client = await getHebClient(userId);
+    const terms = await client.typeahead(q);
+    return { terms };
+  });
+
+  /** Auto-match grocery list items to H-E-B products. */
   app.post('/api/grocery-list/:mealPlanId/match-products', async (request, reply) => {
     const { mealPlanId } = request.params as { mealPlanId: string };
     const userId = request.user!.id;
     const body = matchProductsSchema.safeParse(request.body ?? {});
 
-    // Get the grocery list
     const { data: groceryList } = await supabaseAdmin
       .from('grocery_lists')
       .select('id')
@@ -177,14 +247,9 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
       .single();
 
     if (!groceryList) {
-      return reply.code(404).send({
-        error: 'Not Found',
-        message: 'Grocery list not found',
-        statusCode: 404,
-      });
+      return reply.code(404).send({ error: 'Not Found', message: 'Grocery list not found', statusCode: 404 });
     }
 
-    // Get items to match (either specific IDs or all non-pantry items)
     let query = supabaseAdmin
       .from('grocery_items')
       .select('id, name, quantity, unit, category')
@@ -196,9 +261,7 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
     }
 
     const { data: items } = await query;
-    if (!items?.length) {
-      return { matches: [] };
-    }
+    if (!items?.length) return { matches: [] };
 
     const client = await getHebClient(userId);
     const matches: Array<{
@@ -208,62 +271,41 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
       bestMatch: GroceryProviderProduct | null;
     }> = [];
 
-    // Search for each grocery item
     for (const item of items) {
       try {
-        const searchQuery = item.name;
-        const products = await client.searchProducts(searchQuery, 5);
+        const products = await client.searchProducts(item.name, 5);
+        const bestMatch = products[0] ?? null;
 
-        const bestMatch = products.length > 0 ? products[0] : null;
+        matches.push({ groceryItemId: item.id, groceryItemName: item.name, products, bestMatch });
 
-        matches.push({
-          groceryItemId: item.id,
-          groceryItemName: item.name,
-          products,
-          bestMatch,
-        });
-
-        // Save the best match to the database
         if (bestMatch) {
-          // Delete any existing match for this item
-          await supabaseAdmin
-            .from('product_matches')
-            .delete()
-            .eq('grocery_item_id', item.id);
-
-          await supabaseAdmin
-            .from('product_matches')
-            .insert({
-              grocery_item_id: item.id,
-              product_id: bestMatch.productId,
-              sku_id: bestMatch.skuId,
-              product_name: bestMatch.name,
-              brand: bestMatch.brand,
-              size: bestMatch.size,
-              price: bestMatch.price,
-              unit_price: bestMatch.unitPrice,
-              image_url: bestMatch.imageUrl,
-              product_url: bestMatch.productUrl,
-              in_stock: bestMatch.inStock,
-              category: bestMatch.category,
-              status: 'matched',
-            });
+          await supabaseAdmin.from('product_matches').delete().eq('grocery_item_id', item.id);
+          await supabaseAdmin.from('product_matches').insert({
+            grocery_item_id: item.id,
+            product_id: bestMatch.productId,
+            sku_id: bestMatch.skuId,
+            product_name: bestMatch.name,
+            brand: bestMatch.brand,
+            size: bestMatch.size,
+            price: bestMatch.price,
+            unit_price: bestMatch.unitPrice,
+            image_url: bestMatch.imageUrl,
+            product_url: bestMatch.productUrl,
+            in_stock: bestMatch.inStock,
+            category: bestMatch.category,
+            status: 'matched',
+          });
         }
       } catch (err) {
-        request.log.warn({ err, item: item.name }, 'Failed to search for item');
-        matches.push({
-          groceryItemId: item.id,
-          groceryItemName: item.name,
-          products: [],
-          bestMatch: null,
-        });
+        request.log.warn({ err, item: item.name }, 'Failed to match item');
+        matches.push({ groceryItemId: item.id, groceryItemName: item.name, products: [], bestMatch: null });
       }
     }
 
     return { matches };
   });
 
-  // Get all product matches for a grocery list
+  /** Get matches for a grocery list. */
   app.get('/api/grocery-list/:mealPlanId/matches', async (request, reply) => {
     const { mealPlanId } = request.params as { mealPlanId: string };
     const userId = request.user!.id;
@@ -276,11 +318,7 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
       .single();
 
     if (!groceryList) {
-      return reply.code(404).send({
-        error: 'Not Found',
-        message: 'Grocery list not found',
-        statusCode: 404,
-      });
+      return reply.code(404).send({ error: 'Not Found', message: 'Grocery list not found', statusCode: 404 });
     }
 
     const { data: items } = await supabaseAdmin
@@ -293,23 +331,15 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
     return { items: items ?? [] };
   });
 
-  // Confirm or change a product match for a specific grocery item
+  /** Confirm/change a product match. */
   app.put('/api/grocery-items/:itemId/match', async (request, reply) => {
     const { itemId } = request.params as { itemId: string };
     const body = confirmMatchSchema.safeParse(request.body);
     if (!body.success) {
-      return reply.code(400).send({
-        error: 'Bad Request',
-        message: body.error.issues.map((i) => i.message).join(', '),
-        statusCode: 400,
-      });
+      return reply.code(400).send({ error: 'Bad Request', message: body.error.issues.map(i => i.message).join(', '), statusCode: 400 });
     }
 
-    // Delete any existing match
-    await supabaseAdmin
-      .from('product_matches')
-      .delete()
-      .eq('grocery_item_id', itemId);
+    await supabaseAdmin.from('product_matches').delete().eq('grocery_item_id', itemId);
 
     const { data: match, error } = await supabaseAdmin
       .from('product_matches')
@@ -333,40 +363,31 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
 
     if (error) {
       request.log.error({ error }, 'Failed to save product match');
-      return reply.code(500).send({
-        error: 'Server Error',
-        message: 'Failed to save product match',
-        statusCode: 500,
-      });
+      return reply.code(500).send({ error: 'Server Error', message: 'Failed to save match', statusCode: 500 });
     }
 
     return { match };
   });
 
-  // ─── Cart Operations ───
+  // ────────────────────────────────────────────────────────────────────
+  //  Cart
+  // ────────────────────────────────────────────────────────────────────
 
-  // Add matched items to HEB cart
+  /** Add items to H-E-B cart. */
   app.post('/api/heb/cart/add', async (request, reply) => {
     const body = addToCartSchema.safeParse(request.body);
     if (!body.success) {
-      return reply.code(400).send({
-        error: 'Bad Request',
-        message: body.error.issues.map((i) => i.message).join(', '),
-        statusCode: 400,
-      });
+      return reply.code(400).send({ error: 'Bad Request', message: body.error.issues.map(i => i.message).join(', '), statusCode: 400 });
     }
 
     const userId = request.user!.id;
     const client = await getHebClient(userId);
-
     const results: Array<{ productId: string; success: boolean; error?: string }> = [];
     let latestCart = null;
 
     for (const item of body.data.items) {
       try {
         latestCart = await client.addToCart(item.productId, item.skuId, item.quantity);
-
-        // Update match status to 'in_cart'
         if (item.groceryItemId) {
           await supabaseAdmin
             .from('product_matches')
@@ -374,11 +395,10 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
             .eq('grocery_item_id', item.groceryItemId)
             .eq('product_id', item.productId);
         }
-
         results.push({ productId: item.productId, success: true });
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Unknown error';
-        request.log.warn({ err, productId: item.productId }, 'Failed to add item to cart');
+        request.log.warn({ err, productId: item.productId }, 'Failed to add to cart');
         results.push({ productId: item.productId, success: false, error: msg });
       }
     }
@@ -386,7 +406,7 @@ export async function hebRoutes(app: FastifyInstance): Promise<void> {
     return { results, cart: latestCart };
   });
 
-  // Get current HEB cart
+  /** Get current H-E-B cart. */
   app.get('/api/heb/cart', async (request) => {
     const userId = request.user!.id;
     const client = await getHebClient(userId);
