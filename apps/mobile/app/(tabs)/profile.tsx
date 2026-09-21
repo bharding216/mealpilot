@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
@@ -11,14 +11,9 @@ import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const bridge = useHebBridge();
-  const [hebStoreName, setHebStoreName] = useState<string | null>(null);
 
   useEffect(() => {
-    bridge.checkAuth().then((result) => {
-      if (result.authenticated && result.store) {
-        setHebStoreName(result.store.name);
-      }
-    }).catch(() => {});
+    bridge.checkAuth().catch(() => {});
   }, []);
 
   const handleSignOut = () => {
@@ -69,7 +64,7 @@ export default function ProfileScreen() {
         <MenuItem
           icon="storefront"
           label="H‑E‑B Store"
-          subtitle={hebStoreName ?? 'Not connected'}
+          subtitle={bridge.isAuthenticated ? (bridge.store?.name ?? 'Connected') : 'Not connected'}
           onPress={() => router.push('/heb-connect')}
         />
       </View>

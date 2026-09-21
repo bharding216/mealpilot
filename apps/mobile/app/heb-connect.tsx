@@ -260,8 +260,16 @@ function CartTestSection() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [cartTotal, setCartTotal] = useState<number | null>(null);
+  const [cartItemCount, setCartItemCount] = useState(0);
   const [loadingCart, setLoadingCart] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
+  const [updatingItem, setUpdatingItem] = useState<string | null>(null);
+
+  const updateCartState = (cart: any) => {
+    setCartItems(cart.items ?? []);
+    setCartTotal(cart.estimatedTotal);
+    setCartItemCount(cart.itemCount ?? cart.items?.length ?? 0);
+  };
 
   const handleSearch = async (query: string) => {
     setSearching(true);
@@ -285,12 +293,12 @@ function CartTestSection() {
     setAdding(product.productId);
     try {
       const cart = await bridge.addToCart(product.productId, product.skuId, 1);
+      updateCartState(cart);
       Alert.alert(
         'Added to Cart! 🛒',
         `${product.name}\n\nCart now has ${cart.itemCount} item${cart.itemCount === 1 ? '' : 's'}` +
           (cart.estimatedTotal != null ? `\nEstimated total: $${cart.estimatedTotal.toFixed(2)}` : ''),
       );
-      setCartTotal(cart.estimatedTotal);
     } catch (err) {
       Alert.alert('Cart Error', err instanceof Error ? err.message : 'Failed to add to cart');
     } finally {
@@ -298,12 +306,42 @@ function CartTestSection() {
     }
   };
 
+  const handleUpdateQuantity = async (item: any, newQuantity: number) => {
+    const key = `${item.productId}-${item.skuId}`;
+    setUpdatingItem(key);
+    try {
+      if (newQuantity <= 0) {
+        const cart = await bridge.removeFromCart(item.productId, item.skuId);
+        updateCartState(cart);
+      } else {
+        const cart = await bridge.updateCartItem(item.productId, item.skuId, newQuantity);
+        updateCartState(cart);
+      }
+    } catch (err) {
+      Alert.alert('Cart Error', err instanceof Error ? err.message : 'Failed to update item');
+    } finally {
+      setUpdatingItem(null);
+    }
+  };
+
+  const handleRemoveItem = async (item: any) => {
+    const key = `${item.productId}-${item.skuId}`;
+    setUpdatingItem(key);
+    try {
+      const cart = await bridge.removeFromCart(item.productId, item.skuId);
+      updateCartState(cart);
+    } catch (err) {
+      Alert.alert('Cart Error', err instanceof Error ? err.message : 'Failed to remove item');
+    } finally {
+      setUpdatingItem(null);
+    }
+  };
+
   const handleViewCart = async () => {
     setLoadingCart(true);
     try {
       const cart = await bridge.getCart();
-      setCartItems(cart.items);
-      setCartTotal(cart.estimatedTotal);
+      updateCartState(cart);
       if (cart.items.length === 0) {
         Alert.alert('Cart Empty', 'Your H‑E‑B cart is empty.');
       }
@@ -405,25 +443,59 @@ function CartTestSection() {
       {cartItems.length > 0 && (
         <View style={testStyles.cartSection}>
           <Text style={testStyles.cartTitle}>
-            Cart ({cartItems.length} item{cartItems.length === 1 ? '' : 's'})
+            Cart ({cartItemCount} item{cartItemCount === 1 ? '' : 's'})
             {cartTotal != null && ` · $${cartTotal.toFixed(2)}`}
           </Text>
-          {cartItems.map((item, idx) => (
-            <View key={`${item.productId}-${idx}`} style={testStyles.cartItem}>
-              {item.imageUrl && (
-                <Image source={{ uri: item.imageUrl }} style={testStyles.cartItemImage} />
-              )}
-              <View style={testStyles.cartItemInfo}>
-                <Text style={testStyles.cartItemName} numberOfLines={1}>
-                  {item.name}
-                </Text>
-                <Text style={testStyles.cartItemQty}>
-                  Qty: {item.quantity}
-                  {item.price != null && ` · $${item.price.toFixed(2)}`}
-                </Text>
+          {cartItems.map((item, idx) => {
+            const itemKey = `${item.productId}-${item.skuId}`;
+            const isUpdating = updatingItem === itemKey;
+            return (
+              <View key={`${item.productId}-${idx}`} style={testStyles.cartItem}>
+                {item.imageUrl && (
+                  <Image source={{ uri: item.imageUrl }} style={testStyles.cartItemImage} />
+                )}
+                <View style={testStyles.cartItemInfo}>
+                  <Text style={testStyles.cartItemName} numberOfLines={2}>
+                    {item.name || 'Unknown item'}
+                  </Text>
+                  {item.price != null && (
+                    <Text style={testStyles.cartItemPrice}>${item.price.toFixed(2)}</Text>
+                  )}
+                </View>
+                <View style={testStyles.qtyControls}>
+                  {isUpdating ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <>
+                      <TouchableOpacity
+                        style={testStyles.qtyBtn}
+                        onPress={() => {
+                          if (item.quantity <= 1) {
+                            handleRemoveItem(item);
+                          } else {
+                            handleUpdateQuantity(item, item.quantity - 1);
+                          }
+                        }}
+                      >
+                        <AppIcon
+                          name={item.quantity <= 1 ? 'trash' : 'minus'}
+                          size={14}
+                          color={item.quantity <= 1 ? colors.error : colors.text}
+                        />
+                      </TouchableOpacity>
+                      <Text style={testStyles.qtyText}>{item.quantity}</Text>
+                      <TouchableOpacity
+                        style={testStyles.qtyBtn}
+                        onPress={() => handleUpdateQuantity(item, item.quantity + 1)}
+                      >
+                        <AppIcon name="plus" size={14} color={colors.text} />
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </View>
@@ -521,12 +593,34 @@ const testStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
   },
-  cartItemImage: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+  cartItemImage: { width: 44, height: 44, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
   cartItemInfo: { flex: 1 },
-  cartItemName: { fontSize: fontSize.sm, color: colors.text },
-  cartItemQty: { fontSize: fontSize.xs, color: colors.textSecondary },
+  cartItemName: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
+  cartItemPrice: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold, marginTop: 2 },
+  qtyControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  qtyBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qtyText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    minWidth: 24,
+    textAlign: 'center',
+  },
 });
 
 const styles = StyleSheet.create({

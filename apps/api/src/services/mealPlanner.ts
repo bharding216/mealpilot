@@ -1,5 +1,7 @@
 import { getOpenAI } from './openai.js';
 
+// ─── Types ───
+
 interface MealSuggestion {
   dayOfWeek: number;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
@@ -23,7 +25,170 @@ interface MealPlanSuggestion {
   meals: MealSuggestion[];
 }
 
+interface MealOption {
+  title: string;
+  description: string;
+  estimatedTime: string;
+  tags: string[];
+}
+
+interface ChatSuggestResult {
+  reply: string;
+  suggestions: MealOption[];
+}
+
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// ─── Chat-based suggestion (lightweight, no recipes) ───
+
+export async function generateMealSuggestions(
+  userMessage: string,
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+  existingMealTitles: string[],
+  preferences?: {
+    dietaryRestrictions?: string[];
+    dislikedFoods?: string[];
+    favoriteCuisines?: string[];
+    householdSize?: number;
+    cookingTimePreference?: string;
+    kidFriendly?: boolean;
+    groceryBudget?: number;
+  }
+): Promise<ChatSuggestResult> {
+  const openai = getOpenAI();
+
+  const existingMealsContext = existingMealTitles.length > 0
+    ? `\n\nMeals already in the plan (do NOT repeat these):\n${existingMealTitles.map((t) => `- ${t}`).join('\n')}`
+    : '';
+
+  const systemPrompt = `You are MealPilot, a friendly and knowledgeable meal-planning assistant. You help users discover meals they'll love.
+
+Your job is to have a natural conversation and suggest 2-3 specific meal options based on what the user asks for. Do NOT generate full recipes or ingredient lists — just suggest meals with brief, appetizing descriptions.
+
+Return your response as valid JSON:
+{
+  "reply": "A friendly conversational message (1-3 sentences). Introduce your suggestions naturally. Be warm and enthusiastic but not over-the-top.",
+  "suggestions": [
+    {
+      "title": "Meal Name",
+      "description": "1-2 sentence appetizing description of the meal",
+      "estimatedTime": "30 min",
+      "tags": ["high-protein", "kid-friendly", "italian"]
+    }
+  ]
+}
+
+Guidelines:
+- Always suggest exactly 2-3 meal options
+- Make descriptions appetizing and specific (mention key flavors/techniques)
+- Tags should be relevant attributes (cuisine, diet, time, family-friendly, etc.)
+- Consider the full conversation history to refine suggestions
+- If the user is vague, suggest diverse options and ask follow-up questions in your reply
+- Be conversational — reference what the user said${existingMealsContext}
+
+Only return valid JSON, no additional text.`;
+
+  const userContent = buildUserMessage(userMessage, preferences);
+
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: systemPrompt },
+  ];
+
+  for (const msg of conversationHistory.slice(-8)) {
+    messages.push({ role: msg.role, content: msg.content });
+  }
+  messages.push({ role: 'user', content: userContent });
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages,
+    response_format: { type: 'json_object' },
+    temperature: 0.9,
+    max_tokens: 1000,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('No response from AI');
+
+  return JSON.parse(content) as ChatSuggestResult;
+}
+
+// ─── Generate a full recipe for a selected meal ───
+
+export async function generateRecipeForMeal(
+  mealTitle: string,
+  mealDescription: string,
+  dayOfWeek: number,
+  mealType: string,
+  preferences?: {
+    dietaryRestrictions?: string[];
+    dislikedFoods?: string[];
+    favoriteCuisines?: string[];
+    householdSize?: number;
+    cookingTimePreference?: string;
+    kidFriendly?: boolean;
+  }
+): Promise<MealSuggestion> {
+  const openai = getOpenAI();
+
+  const systemPrompt = `You are MealPilot. Generate a complete recipe for the following meal.
+
+Meal: "${mealTitle}"
+Description: "${mealDescription}"
+Day: ${DAY_NAMES[dayOfWeek]}
+Meal type: ${mealType}
+
+Return your response as valid JSON:
+{
+  "dayOfWeek": ${dayOfWeek},
+  "mealType": "${mealType}",
+  "title": "${mealTitle}",
+  "description": "Brief description",
+  "servings": 4,
+  "prepTimeMinutes": 15,
+  "cookTimeMinutes": 30,
+  "instructions": ["Step 1...", "Step 2..."],
+  "ingredients": [
+    {
+      "name": "ingredient name",
+      "quantity": 2,
+      "unit": "lb",
+      "notes": "optional notes",
+      "category": "meat"
+    }
+  ]
+}
+
+Valid categories: produce, meat, seafood, dairy, bakery, pantry, frozen, beverages, spices, other
+
+Guidelines:
+- Be specific with quantities and ingredient names
+- Keep instructions clear and numbered (6-10 steps)
+- Only return valid JSON, no additional text`;
+
+  const userContent = buildUserMessage(
+    `Generate a complete recipe for "${mealTitle}" — ${mealDescription}`,
+    preferences,
+  );
+
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userContent },
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.7,
+    max_tokens: 2500,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('No response from AI');
+
+  return JSON.parse(content) as MealSuggestion;
+}
+
+// ─── Legacy: Generate a full meal plan in one shot ───
 
 export async function generateMealPlan(
   userMessage: string,

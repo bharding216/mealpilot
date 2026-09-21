@@ -67,6 +67,8 @@ interface HebBridgeContextType {
   checkAuth: () => Promise<AuthResult>;
   searchProducts: (query: string, limit?: number) => Promise<{ products: HebProduct[]; raw: string | null }>;
   addToCart: (productId: string, skuId: string, quantity?: number) => Promise<HebCart>;
+  updateCartItem: (productId: string, skuId: string, quantity: number) => Promise<HebCart>;
+  removeFromCart: (productId: string, skuId: string) => Promise<HebCart>;
   getCart: () => Promise<HebCart>;
   reload: () => void;
 }
@@ -615,18 +617,50 @@ const BRIDGE_JS = `
                 if (json.errors) throw new Error(json.errors[0].message || 'Cart operation failed');
                 var rawCart = json.data && json.data.addItemToCartV2;
                 var typename = rawCart && rawCart.__typename;
-                if (window.ReactNativeWebView) {
-                  window.ReactNativeWebView.postMessage(JSON.stringify({
-                    type: 'debug_cart',
-                    operation: 'addToCart:response',
-                    dataKeys: json.data ? Object.keys(json.data).join(', ') : 'no data',
-                    cartKeys: rawCart ? Object.keys(rawCart).join(', ') : 'no cart obj',
-                    rawSample: JSON.stringify(rawCart).slice(0, 1500),
-                  }));
-                }
                 // Handle error union type
                 if (typename === 'AddItemToCartV2Error') {
                   throw new Error(rawCart.message || 'Failed to add item to cart');
+                }
+                return parseCart(rawCart);
+              });
+            break;
+          case 'updateCartItem':
+            p = gqlWithRetry('cartItemV2', {
+              userIsLoggedIn: true,
+              productId: params.productId,
+              skuId: params.skuId,
+              quantity: params.quantity,
+            })
+              .then(function(json) {
+                if (json.errors) throw new Error(json.errors[0].message || 'Cart operation failed');
+                var rawCart = json.data && (json.data.addItemToCartV2 || json.data.updateCartItemV2);
+                var typename = rawCart && rawCart.__typename;
+                if (typename === 'AddItemToCartV2Error' || typename === 'UpdateCartItemV2Error') {
+                  throw new Error(rawCart.message || 'Failed to update cart item');
+                }
+                return parseCart(rawCart);
+              });
+            break;
+          case 'removeFromCart':
+            p = gqlWithRetry('cartItemV2', {
+              userIsLoggedIn: true,
+              productId: params.productId,
+              skuId: params.skuId,
+              quantity: 0,
+            })
+              .then(function(json) {
+                if (json.errors) throw new Error(json.errors[0].message || 'Cart operation failed');
+                var rawCart = json.data && (json.data.addItemToCartV2 || json.data.removeItemFromCartV2 || json.data.deleteCartItemV2);
+                var typename = rawCart && rawCart.__typename;
+                if (typename && typename.indexOf('Error') !== -1) {
+                  throw new Error(rawCart.message || 'Failed to remove cart item');
+                }
+                // If the mutation doesn't return cart data, fetch it
+                if (!rawCart || !rawCart.items) {
+                  return gqlWithRetry('cartEstimated', { userIsLoggedIn: true })
+                    .then(function(cartJson) {
+                      return parseCart(cartJson.data && cartJson.data.cartV2);
+                    });
                 }
                 return parseCart(rawCart);
               });
@@ -805,6 +839,18 @@ export function HebBridgeProvider({ children }: { children: React.ReactNode }) {
     [sendCommand],
   );
 
+  const updateCartItem = useCallback(
+    (productId: string, skuId: string, quantity: number): Promise<HebCart> =>
+      sendCommand('updateCartItem', { productId, skuId, quantity }),
+    [sendCommand],
+  );
+
+  const removeFromCart = useCallback(
+    (productId: string, skuId: string): Promise<HebCart> =>
+      sendCommand('removeFromCart', { productId, skuId }),
+    [sendCommand],
+  );
+
   const getCart = useCallback((): Promise<HebCart> => sendCommand('getCart'), [sendCommand]);
 
   const reload = useCallback(() => {
@@ -836,6 +882,8 @@ export function HebBridgeProvider({ children }: { children: React.ReactNode }) {
     checkAuth,
     searchProducts,
     addToCart,
+    updateCartItem,
+    removeFromCart,
     getCart,
     reload,
   };

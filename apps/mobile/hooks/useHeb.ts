@@ -91,8 +91,11 @@ export function useHeb() {
         );
         const items = res.items;
 
+        // Only match items the user still needs (skip checked / pantry items)
+        const itemsToMatch = items.filter((item) => !item.checked && !item.in_pantry);
+
         // Search H-E-B for each item via the bridge
-        for (const item of items) {
+        for (const item of itemsToMatch) {
           try {
             const { products } = await bridge.searchProducts(item.name, 5);
             const bestMatch = products[0];

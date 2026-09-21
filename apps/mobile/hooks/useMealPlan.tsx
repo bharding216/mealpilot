@@ -48,10 +48,26 @@ interface MealPlanState {
   loading: boolean;
   error: string | null;
   createMealPlan: (message: string) => Promise<MealPlanData>;
+  suggestMeals: (
+    message: string,
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+  ) => Promise<{ reply: string; suggestions: MealOptionData[] }>;
+  addMealFromSuggestion: (
+    suggestion: { title: string; description: string },
+    dayOfWeek: number,
+    mealType?: string,
+  ) => Promise<MealPlanData>;
   fetchMealPlan: (id: string) => Promise<void>;
   fetchLatestMealPlan: () => Promise<void>;
   replaceMeal: (mealPlanId: string, mealId: string, message?: string) => Promise<void>;
   clearError: () => void;
+}
+
+interface MealOptionData {
+  title: string;
+  description: string;
+  estimatedTime: string;
+  tags: string[];
 }
 
 const MealPlanContext = createContext<MealPlanState | undefined>(undefined);
@@ -70,6 +86,51 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
       return res.mealPlan;
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to create meal plan';
+      setError(msg);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const suggestMeals = useCallback(async (
+    message: string,
+    conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+  ): Promise<{ reply: string; suggestions: MealOptionData[] }> => {
+    try {
+      const res = await api.post<{ reply: string; suggestions: MealOptionData[] }>(
+        '/api/chat/suggest',
+        { message, conversationHistory },
+      );
+      return res;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to get suggestions';
+      setError(msg);
+      throw err;
+    }
+  }, []);
+
+  const addMealFromSuggestion = useCallback(async (
+    suggestion: { title: string; description: string },
+    dayOfWeek: number,
+    mealType = 'dinner',
+  ): Promise<MealPlanData> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.post<{ mealPlan: MealPlanData; meal: any }>(
+        '/api/meal-plan/add-meal',
+        {
+          title: suggestion.title,
+          description: suggestion.description,
+          dayOfWeek,
+          mealType,
+        },
+      );
+      setCurrentPlan(res.mealPlan);
+      return res.mealPlan;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to add meal';
       setError(msg);
       throw err;
     } finally {
@@ -131,6 +192,8 @@ export function MealPlanProvider({ children }: { children: React.ReactNode }) {
         loading,
         error,
         createMealPlan,
+        suggestMeals,
+        addMealFromSuggestion,
         fetchMealPlan,
         fetchLatestMealPlan,
         replaceMeal,

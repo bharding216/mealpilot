@@ -6,9 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fontSize } from '@/lib/theme';
 
 const TAB_ICONS = {
-  index: { sf: 'house', ionicon: 'home-outline' as const, sfFilled: 'house.fill', ioniconFilled: 'home' as const },
-  plan: { sf: 'calendar', ionicon: 'calendar-outline' as const, sfFilled: 'calendar.badge.clock', ioniconFilled: 'calendar' as const },
-  groceries: { sf: 'cart', ionicon: 'cart-outline' as const, sfFilled: 'cart.fill', ioniconFilled: 'cart' as const },
+  index: { sf: 'calendar', ionicon: 'calendar-outline' as const, sfFilled: 'calendar.badge.clock', ioniconFilled: 'calendar' as const },
+  cookbook: { sf: 'book', ionicon: 'book-outline' as const, sfFilled: 'book.fill', ioniconFilled: 'book' as const },
+  cart: { sf: 'cart', ionicon: 'cart-outline' as const, sfFilled: 'cart.fill', ioniconFilled: 'cart' as const },
   profile: { sf: 'person', ionicon: 'person-outline' as const, sfFilled: 'person.fill', ioniconFilled: 'person' as const },
 } as const;
 
@@ -51,27 +51,27 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: 'Plan',
           tabBarIcon: ({ color, size, focused }) => (
             <TabIcon name="index" color={color} size={size} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="plan"
+        name="cookbook"
         options={{
-          title: 'Meal Plan',
+          title: 'Cookbook',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon name="plan" color={color} size={size} focused={focused} />
+            <TabIcon name="cookbook" color={color} size={size} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="groceries"
+        name="cart"
         options={{
-          title: 'Groceries',
+          title: 'Cart',
           tabBarIcon: ({ color, size, focused }) => (
-            <TabIcon name="groceries" color={color} size={size} focused={focused} />
+            <TabIcon name="cart" color={color} size={size} focused={focused} />
           ),
         }}
       />
@@ -84,6 +84,9 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Hide old tabs that are being replaced */}
+      <Tabs.Screen name="plan" options={{ href: null }} />
+      <Tabs.Screen name="groceries" options={{ href: null }} />
     </Tabs>
   );
 }

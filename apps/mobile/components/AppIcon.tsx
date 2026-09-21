@@ -27,20 +27,30 @@ const ICON_MAP: Record<string, { sf: SFSymbol; ionicon: React.ComponentProps<typ
   'xmark':           { sf: 'xmark',                     ionicon: 'close' },
   'xmark.circle':    { sf: 'xmark.circle',              ionicon: 'close-circle-outline' },
   'plus':            { sf: 'plus',                      ionicon: 'add' },
+  'minus':           { sf: 'minus',                     ionicon: 'remove' },
+  'trash':           { sf: 'trash',                     ionicon: 'trash-outline' },
 
   // Content
   'sparkles':        { sf: 'sparkles',                  ionicon: 'sparkles' },
   'timer':           { sf: 'timer',                     ionicon: 'timer-outline' },
+  'flame':           { sf: 'flame',                     ionicon: 'flame-outline' },
   'person.2':        { sf: 'person.2',                  ionicon: 'people-outline' },
   'bubble.left':     { sf: 'bubble.left',               ionicon: 'chatbubble-outline' },
   'list.bullet':     { sf: 'list.bullet',               ionicon: 'list-outline' },
   'tray':            { sf: 'tray',                      ionicon: 'file-tray-outline' },
   'storefront':      { sf: 'storefront',                ionicon: 'storefront-outline' },
   'slider.horizontal.3': { sf: 'slider.horizontal.3',   ionicon: 'options-outline' },
+  'book':            { sf: 'book',                      ionicon: 'book-outline' },
+  'book.fill':       { sf: 'book.fill',                 ionicon: 'book' },
+  'magnifyingglass': { sf: 'magnifyingglass',           ionicon: 'search-outline' },
+  'text.bubble':     { sf: 'text.bubble',               ionicon: 'chatbubble-ellipses-outline' },
+  'arrow.up':        { sf: 'arrow.up',                  ionicon: 'arrow-up' },
+  'arrow.down':      { sf: 'arrow.down',                ionicon: 'arrow-down' },
 
   // Preferences
   'leaf':            { sf: 'leaf',                      ionicon: 'nutrition-outline' },
   'heart':           { sf: 'heart',                     ionicon: 'heart-outline' },
+  'heart.fill':      { sf: 'heart.fill',                ionicon: 'heart' },
   'wallet':          { sf: 'wallet.bifold',             ionicon: 'wallet-outline' },
 
   // Checkboxes

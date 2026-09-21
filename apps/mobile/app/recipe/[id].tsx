@@ -12,6 +12,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMealPlan } from '@/hooks/useMealPlan';
+import { api } from '@/lib/api';
 import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -38,10 +39,50 @@ export default function RecipeScreen() {
   }>();
 
   const { currentPlan, replaceMeal, loading } = useMealPlan();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favLoading, setFavLoading] = useState(false);
+  const [standaloneRecipe, setStandaloneRecipe] = useState<any>(null);
+  const [recipeLoading, setRecipeLoading] = useState(false);
 
-  // Find the meal in the current plan
+  // Find the meal in the current plan (when navigating from Plan tab)
   const meal = currentPlan?.meals.find((m) => m.id === mealId);
-  const recipe = meal?.recipe;
+  const recipe = meal?.recipe ?? standaloneRecipe;
+  const recipeId = recipe?.id ?? id;
+
+  // Fetch recipe directly when there's no meal context (e.g. from Cookbook)
+  useEffect(() => {
+    if (meal?.recipe || !id) return;
+    setRecipeLoading(true);
+    api.get<{ recipe: any }>(`/api/recipes/${id}`)
+      .then((data) => setStandaloneRecipe(data.recipe))
+      .catch((err) => console.log('[Recipe] Failed to fetch:', err))
+      .finally(() => setRecipeLoading(false));
+  }, [id, meal]);
+
+  // Check favorite status
+  useEffect(() => {
+    if (!recipeId) return;
+    api.get<{ isFavorite: boolean }>(`/api/recipes/${recipeId}/favorite`)
+      .then((data) => setIsFavorite(data.isFavorite ?? false))
+      .catch(() => {});
+  }, [recipeId]);
+
+  const toggleFavorite = async () => {
+    if (!recipeId) return;
+    setFavLoading(true);
+    try {
+      if (isFavorite) {
+        await api.delete(`/api/recipes/${recipeId}/favorite`);
+      } else {
+        await api.post(`/api/recipes/${recipeId}/favorite`);
+      }
+      setIsFavorite(!isFavorite);
+    } catch {
+      Alert.alert('Error', 'Failed to update favorite.');
+    } finally {
+      setFavLoading(false);
+    }
+  };
 
   const handleReplace = () => {
     Alert.alert('Replace Meal', `Replace "${meal?.title}"?`, [
@@ -57,6 +98,17 @@ export default function RecipeScreen() {
       },
     ]);
   };
+
+  if (recipeLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title={title ?? 'Recipe'} />
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!recipe) {
     return (
@@ -76,7 +128,12 @@ export default function RecipeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title={recipe.title} />
+      <Header
+        title={recipe.title}
+        isFavorite={isFavorite}
+        favLoading={favLoading}
+        onToggleFavorite={toggleFavorite}
+      />
 
       <ScrollView
         style={styles.scroll}
@@ -137,7 +194,7 @@ export default function RecipeScreen() {
         {/* Ingredients */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ingredients</Text>
-          {recipe.ingredients.map((ing, idx) => (
+          {recipe.ingredients.map((ing: any, idx: number) => (
             <View key={idx} style={styles.ingredientRow}>
               <Text style={styles.ingredientEmoji}>
                 {CATEGORY_EMOJI[ing.category] ?? '📦'}
@@ -157,7 +214,7 @@ export default function RecipeScreen() {
         {/* Instructions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Instructions</Text>
-          {recipe.instructions.map((step, idx) => (
+          {recipe.instructions.map((step: string, idx: number) => (
             <View key={idx} style={styles.stepRow}>
               <View style={styles.stepNumber}>
                 <Text style={styles.stepNumberText}>{idx + 1}</Text>
@@ -189,7 +246,17 @@ export default function RecipeScreen() {
   );
 }
 
-function Header({ title }: { title: string }) {
+function Header({
+  title,
+  isFavorite,
+  favLoading,
+  onToggleFavorite,
+}: {
+  title: string;
+  isFavorite?: boolean;
+  favLoading?: boolean;
+  onToggleFavorite?: () => void;
+}) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -198,7 +265,25 @@ function Header({ title }: { title: string }) {
       <Text style={styles.headerTitle} numberOfLines={1}>
         {title}
       </Text>
-      <View style={styles.backButton} />
+      {onToggleFavorite ? (
+        <TouchableOpacity
+          onPress={onToggleFavorite}
+          style={styles.backButton}
+          disabled={favLoading}
+        >
+          {favLoading ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <AppIcon
+              name={isFavorite ? 'heart.fill' : 'heart'}
+              size={22}
+              color={isFavorite ? colors.error : colors.textTertiary}
+            />
+          )}
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.backButton} />
+      )}
     </View>
   );
 }
