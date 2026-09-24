@@ -808,6 +808,13 @@ export function HebBridgeProvider({ children }: { children: React.ReactNode }) {
     executeJS(BRIDGE_JS);
   }, [executeJS]);
 
+  // Auto-check auth once the bridge is ready so isAuthenticated is always current
+  useEffect(() => {
+    if (isReady) {
+      checkAuthRef.current().catch(() => {});
+    }
+  }, [isReady]);
+
   // ─── Public API ───
 
   const checkAuth = useCallback(async (): Promise<AuthResult> => {
@@ -822,6 +829,10 @@ export function HebBridgeProvider({ children }: { children: React.ReactNode }) {
       return { authenticated: false, store: null, itemCount: 0 };
     }
   }, [sendCommand]);
+
+  // Ref to avoid stale closure in the isReady effect
+  const checkAuthRef = useRef(checkAuth);
+  checkAuthRef.current = checkAuth;
 
   const searchProducts = useCallback(
     async (query: string, limit = 5): Promise<{ products: HebProduct[]; raw: string | null }> => {
