@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,14 +7,13 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Image,
 } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { api } from '@/lib/api';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 interface SavedMeal {
@@ -46,6 +45,8 @@ interface PastMealPlan {
 type TabView = 'favorites' | 'history';
 
 export default function CookbookScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<TabView>('favorites');
   const [favorites, setFavorites] = useState<SavedMeal[]>([]);
   const [history, setHistory] = useState<PastMealPlan[]>([]);
@@ -160,6 +161,9 @@ function FavoritesList({
   onRemove: (meal: SavedMeal) => void;
   onRefresh: () => Promise<void>;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (favorites.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -241,6 +245,9 @@ function HistoryList({
   history: PastMealPlan[];
   onRefresh: () => Promise<void>;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   if (history.length === 0) {
     return (
       <View style={styles.emptyState}>
@@ -298,174 +305,175 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const styles = StyleSheet.create({
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: borderRadius.md,
-    padding: 3,
-    marginBottom: spacing.md,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm + 2,
-    gap: spacing.xs,
-  },
-  tabActive: {
-    backgroundColor: colors.surface,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  tabText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textTertiary,
-  },
-  tabTextActive: {
-    color: colors.primary,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  emptyDesc: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  listContent: {
-    paddingBottom: spacing.xxl,
-  },
-  separator: { height: spacing.sm },
-  mealCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  mealCardBody: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  mealCardInfo: { flex: 1 },
-  mealCardTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  mealCardDesc: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.xs,
-  },
-  mealCardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  mealCardType: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-    textTransform: 'capitalize',
-    backgroundColor: colors.primaryLight + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  metaText: {
-    fontSize: fontSize.xs,
-    color: colors.textTertiary,
-  },
-  heartButton: {
-    padding: spacing.xs,
-    alignSelf: 'flex-start',
-  },
-  historyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  historyHeader: {
-    marginBottom: spacing.sm,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  historyTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-  },
-  historyDate: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  historyMeals: {
-    gap: spacing.xs,
-  },
-  historyMealRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  historyDayBadge: {
-    backgroundColor: colors.primaryLight + '15',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-    minWidth: 36,
-    alignItems: 'center',
-  },
-  historyDayText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  historyMealName: {
-    flex: 1,
-    fontSize: fontSize.sm,
-    color: colors.text,
-  },
-  historyMore: {
-    fontSize: fontSize.xs,
-    color: colors.textTertiary,
-    marginTop: spacing.xs,
-    paddingLeft: 36 + spacing.sm,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    tabBar: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: borderRadius.md,
+      padding: 3,
+      marginBottom: spacing.md,
+    },
+    tab: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.sm + 2,
+      gap: spacing.xs,
+    },
+    tabActive: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08,
+      shadowRadius: 2,
+      elevation: 1,
+    },
+    tabText: {
+      fontSize: fontSize.sm,
+      fontWeight: fontWeight.semibold,
+      color: colors.textTertiary,
+    },
+    tabTextActive: {
+      color: colors.primary,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.xxl * 2,
+    },
+    emptyIcon: {
+      width: 80,
+      height: 80,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceSecondary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: fontSize.xl,
+      fontWeight: fontWeight.semibold,
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    emptyDesc: {
+      fontSize: fontSize.md,
+      color: colors.textSecondary,
+      textAlign: 'center',
+      lineHeight: 22,
+    },
+    listContent: {
+      paddingBottom: spacing.xxl,
+    },
+    separator: { height: spacing.sm },
+    mealCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+    },
+    mealCardBody: {
+      flexDirection: 'row',
+      gap: spacing.sm,
+    },
+    mealCardInfo: { flex: 1 },
+    mealCardTitle: {
+      fontSize: fontSize.md,
+      fontWeight: fontWeight.semibold,
+      color: colors.text,
+      marginBottom: spacing.xs,
+    },
+    mealCardDesc: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: spacing.xs,
+    },
+    mealCardMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      marginTop: spacing.xs,
+    },
+    mealCardType: {
+      fontSize: fontSize.xs,
+      fontWeight: fontWeight.semibold,
+      color: colors.primary,
+      textTransform: 'capitalize',
+      backgroundColor: colors.primaryLight + '15',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+    },
+    metaItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 3,
+    },
+    metaText: {
+      fontSize: fontSize.xs,
+      color: colors.textTertiary,
+    },
+    heartButton: {
+      padding: spacing.xs,
+      alignSelf: 'flex-start',
+    },
+    historyCard: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+    },
+    historyHeader: {
+      marginBottom: spacing.sm,
+      paddingBottom: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+    },
+    historyTitle: {
+      fontSize: fontSize.md,
+      fontWeight: fontWeight.semibold,
+      color: colors.text,
+    },
+    historyDate: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    historyMeals: {
+      gap: spacing.xs,
+    },
+    historyMealRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    historyDayBadge: {
+      backgroundColor: colors.primaryLight + '15',
+      paddingHorizontal: spacing.sm,
+      paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+      minWidth: 36,
+      alignItems: 'center',
+    },
+    historyDayText: {
+      fontSize: fontSize.xs,
+      fontWeight: fontWeight.bold,
+      color: colors.primary,
+    },
+    historyMealName: {
+      flex: 1,
+      fontSize: fontSize.sm,
+      color: colors.text,
+    },
+    historyMore: {
+      fontSize: fontSize.xs,
+      color: colors.textTertiary,
+      marginTop: spacing.xs,
+      paddingLeft: 36 + spacing.sm,
+    },
+  });

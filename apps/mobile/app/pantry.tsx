@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
 import { useGrocery } from '@/hooks/useGrocery';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const COMMON_PANTRY_ITEMS = [
   { name: 'Salt', category: 'spices' },
@@ -40,6 +40,8 @@ const COMMON_PANTRY_ITEMS = [
 ];
 
 export default function PantryScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { pantryItems, fetchPantry, addPantryItem, removePantryItem } = useGrocery();
   const [newItem, setNewItem] = useState('');
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,6 @@ export default function PantryScreen() {
   };
 
   const handleQuickAdd = async (name: string, category: string) => {
-    // Don't add if already in pantry
     if (pantryItems.some((p) => p.name.toLowerCase() === name.toLowerCase())) return;
     try {
       await addPantryItem(name, category);
@@ -101,7 +102,6 @@ export default function PantryScreen() {
           know what you already have.
         </Text>
 
-        {/* Add item input */}
         <View style={styles.addRow}>
           <View style={styles.addInputWrap}>
             <TextInput
@@ -179,111 +179,112 @@ export default function PantryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  description: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.md,
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  addInputWrap: {
-    flex: 1,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sectionLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  pantryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
-  },
-  pantryName: {
-    flex: 1,
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  emptyText: {
-    fontSize: fontSize.md,
-    color: colors.textTertiary,
-    textAlign: 'center',
-    paddingVertical: spacing.lg,
-  },
-  suggestionsSection: {
-    marginTop: spacing.lg,
-  },
-  chipGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surfaceSecondary,
-    borderRadius: borderRadius.full,
-    gap: spacing.xs,
-  },
-  chipText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
-  listContent: {
-    paddingBottom: spacing.xxl,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: fontSize.lg,
+      fontWeight: fontWeight.semibold,
+      color: colors.text,
+      textAlign: 'center',
+    },
+    content: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+    },
+    description: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: spacing.md,
+    },
+    addRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    addInputWrap: {
+      flex: 1,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    sectionLabel: {
+      fontSize: fontSize.sm,
+      fontWeight: fontWeight.semibold,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    pantryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderRadius: borderRadius.sm,
+      marginBottom: spacing.xs,
+      gap: spacing.sm,
+    },
+    pantryName: {
+      flex: 1,
+      fontSize: fontSize.md,
+      color: colors.text,
+    },
+    emptyText: {
+      fontSize: fontSize.md,
+      color: colors.textTertiary,
+      textAlign: 'center',
+      paddingVertical: spacing.lg,
+    },
+    suggestionsSection: {
+      marginTop: spacing.lg,
+    },
+    chipGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
+    chip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.sm,
+      backgroundColor: colors.surfaceSecondary,
+      borderRadius: borderRadius.full,
+      gap: spacing.xs,
+    },
+    chipText: {
+      fontSize: fontSize.sm,
+      color: colors.primary,
+      fontWeight: fontWeight.medium,
+    },
+    listContent: {
+      paddingBottom: spacing.xxl,
+    },
+  });

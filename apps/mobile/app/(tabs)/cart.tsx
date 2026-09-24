@@ -20,7 +20,7 @@ import { useGrocery } from '@/hooks/useGrocery';
 import { useHebBridge, type HebProduct, type HebCartItem } from '@/components/HebBridge';
 import { useHeb } from '@/hooks/useHeb';
 import { api } from '@/lib/api';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const CATEGORY_LABELS: Record<string, string> = {
   produce: '🥬  Produce',
@@ -53,6 +53,8 @@ interface GroceryItem {
 }
 
 export default function CartScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { currentPlan } = useMealPlan();
   const {
     groceryList,
@@ -72,7 +74,6 @@ export default function CartScreen() {
   const [loadingCart, setLoadingCart] = useState(false);
   const [updatingItem, setUpdatingItem] = useState<string | null>(null);
 
-  // Product picker state
   const [pickerVisible, setPickerVisible] = useState(false);
   const [pickerItem, setPickerItem] = useState<any>(null);
   const [pickerResults, setPickerResults] = useState<HebProduct[]>([]);
@@ -174,7 +175,6 @@ export default function CartScreen() {
     );
   }, [heb, handleLoadHebCart]);
 
-  // Product picker
   const openProductPicker = useCallback(async (groceryItem: any) => {
     setPickerItem(groceryItem);
     setPickerVisible(true);
@@ -212,10 +212,8 @@ export default function CartScreen() {
     setPickerVisible(false);
   }, [pickerItem, currentPlan?.id, heb]);
 
-  // Group items by category
   const sections = useMemo(() => {
     if (!groceryList?.items.length) return [];
-
     const groups = new Map<string, GroceryItem[]>();
     for (const item of groceryList.items) {
       if (item.in_pantry) continue;
@@ -224,7 +222,6 @@ export default function CartScreen() {
       list.push(item);
       groups.set(cat, list);
     }
-
     return CATEGORY_ORDER
       .filter((cat) => groups.has(cat))
       .map((cat) => ({
@@ -247,7 +244,6 @@ export default function CartScreen() {
   const matchedCount = heb.itemsWithMatches.filter((i) => i.product_matches.length > 0 && !i.checked && !i.in_pantry).length;
   const hasMatches = matchedCount > 0;
 
-  // ── No meal plan ──
   if (!currentPlan) {
     return (
       <ScreenContainer title="Cart">
@@ -271,7 +267,6 @@ export default function CartScreen() {
     );
   }
 
-  // ── Has plan but no grocery list ──
   if (!groceryList && !loading) {
     return (
       <ScreenContainer title="Cart">
@@ -312,10 +307,8 @@ export default function CartScreen() {
     );
   }
 
-  // ── Main cart view ──
   return (
     <ScreenContainer title="Cart">
-      {/* View toggle */}
       <View style={styles.viewToggle}>
         <TouchableOpacity
           style={[styles.toggleBtn, view === 'groceries' && styles.toggleBtnActive]}
@@ -350,7 +343,6 @@ export default function CartScreen() {
 
       {view === 'groceries' ? (
         <>
-          {/* Progress */}
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressText}>
@@ -401,7 +393,6 @@ export default function CartScreen() {
             stickySectionHeadersEnabled={false}
           />
 
-          {/* Footer actions */}
           <View style={styles.footer}>
             {!hasMatches ? (
               <>
@@ -450,7 +441,6 @@ export default function CartScreen() {
           </View>
         </>
       ) : (
-        /* H-E-B Cart view */
         <>
           {loadingCart ? (
             <View style={styles.centered}>
@@ -545,7 +535,6 @@ export default function CartScreen() {
         </>
       )}
 
-      {/* Product Picker Bottom Sheet */}
       <Modal
         visible={pickerVisible}
         animationType="slide"
@@ -641,6 +630,9 @@ function GroceryItemRow({
   onToggle: () => void;
   onSwap: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <View style={styles.itemCard}>
       <TouchableOpacity
@@ -668,7 +660,6 @@ function GroceryItemRow({
         </View>
       </TouchableOpacity>
 
-      {/* Matched product preview — only show for unchecked items */}
       {match && !item.checked && (
         <TouchableOpacity style={styles.matchPreview} onPress={onSwap} activeOpacity={0.7}>
           {match.image_url ? (
@@ -704,180 +695,171 @@ function formatQty(quantity: number | null, unit: string | null): string {
   return unit ? `${q} ${unit}` : q;
 }
 
-const styles = StyleSheet.create({
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-  loadingText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    width: 80, height: 80, borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm,
-  },
-  emptyDesc: {
-    fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22,
-  },
-  goHomeButton: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2, backgroundColor: colors.primaryLight + '15',
-    borderRadius: borderRadius.full, gap: spacing.xs, marginTop: spacing.lg,
-  },
-  goHomeText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
-  generateButton: { minWidth: 220 },
-  pantryLink: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.xs },
-  pantryLinkText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
+    loadingText: { fontSize: fontSize.sm, color: colors.textSecondary },
+    emptyState: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2,
+    },
+    emptyIcon: {
+      width: 80, height: 80, borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: {
+      fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm,
+    },
+    emptyDesc: {
+      fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22,
+    },
+    goHomeButton: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm + 2, backgroundColor: colors.primaryLight + '15',
+      borderRadius: borderRadius.full, gap: spacing.xs, marginTop: spacing.lg,
+    },
+    goHomeText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+    generateButton: { minWidth: 220 },
+    pantryLink: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.xs },
+    pantryLinkText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
 
-  // View toggle
-  viewToggle: {
-    flexDirection: 'row', backgroundColor: colors.surfaceSecondary,
-    borderRadius: borderRadius.md, padding: 3, marginBottom: spacing.md,
-  },
-  toggleBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: spacing.sm, borderRadius: borderRadius.sm + 2, gap: spacing.xs,
-  },
-  toggleBtnActive: {
-    backgroundColor: colors.surface,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08, shadowRadius: 2, elevation: 1,
-  },
-  toggleText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textTertiary },
-  toggleTextActive: { color: colors.primary },
+    viewToggle: {
+      flexDirection: 'row', backgroundColor: colors.surfaceSecondary,
+      borderRadius: borderRadius.md, padding: 3, marginBottom: spacing.md,
+    },
+    toggleBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      paddingVertical: spacing.sm, borderRadius: borderRadius.sm + 2, gap: spacing.xs,
+    },
+    toggleBtnActive: {
+      backgroundColor: colors.surface,
+      shadowColor: colors.shadow, shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.08, shadowRadius: 2, elevation: 1,
+    },
+    toggleText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textTertiary },
+    toggleTextActive: { color: colors.primary },
 
-  // Progress
-  progressContainer: { marginBottom: spacing.md },
-  progressHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  progressText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  pantryNavText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  progressBar: {
-    height: 6, backgroundColor: colors.borderLight, borderRadius: borderRadius.full, overflow: 'hidden',
-  },
-  progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: borderRadius.full },
+    progressContainer: { marginBottom: spacing.md },
+    progressHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    progressText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+    pantryNavText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+    progressBar: {
+      height: 6, backgroundColor: colors.borderLight, borderRadius: borderRadius.full, overflow: 'hidden',
+    },
+    progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: borderRadius.full },
 
-  errorBanner: {
-    backgroundColor: colors.error + '15', paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, borderRadius: borderRadius.sm, marginBottom: spacing.md,
-  },
-  errorText: { fontSize: fontSize.sm, color: colors.error },
+    errorBanner: {
+      backgroundColor: colors.error + '15', paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm, borderRadius: borderRadius.sm, marginBottom: spacing.md,
+    },
+    errorText: { fontSize: fontSize.sm, color: colors.error },
 
-  sectionHeader: {
-    fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text,
-    paddingVertical: spacing.sm, marginTop: spacing.sm,
-  },
-  listContent: { paddingBottom: spacing.xxl },
+    sectionHeader: {
+      fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text,
+      paddingVertical: spacing.sm, marginTop: spacing.sm,
+    },
+    listContent: { paddingBottom: spacing.xxl },
 
-  // Grocery item card
-  itemCard: {
-    backgroundColor: colors.surface, borderRadius: borderRadius.md,
-    marginBottom: spacing.xs, overflow: 'hidden',
-  },
-  itemRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, gap: spacing.sm,
-  },
-  itemContent: { flex: 1 },
-  itemName: { fontSize: fontSize.md, color: colors.text },
-  itemNameChecked: { textDecorationLine: 'line-through', color: colors.textTertiary },
-  itemQty: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
-  itemQtyChecked: { color: colors.textTertiary },
+    itemCard: {
+      backgroundColor: colors.surface, borderRadius: borderRadius.md,
+      marginBottom: spacing.xs, overflow: 'hidden',
+    },
+    itemRow: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, gap: spacing.sm,
+    },
+    itemContent: { flex: 1 },
+    itemName: { fontSize: fontSize.md, color: colors.text },
+    itemNameChecked: { textDecorationLine: 'line-through', color: colors.textTertiary },
+    itemQty: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+    itemQtyChecked: { color: colors.textTertiary },
 
-  // Matched product preview
-  matchPreview: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderTopWidth: 1, borderTopColor: colors.borderLight,
-    backgroundColor: colors.surfaceSecondary + '60',
-  },
-  matchImage: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
-  matchImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  matchInfo: { flex: 1 },
-  matchName: { fontSize: fontSize.sm, color: colors.text },
-  matchMeta: { flexDirection: 'row', gap: spacing.sm, marginTop: 2 },
-  matchPrice: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
-  matchSize: { fontSize: fontSize.xs, color: colors.textTertiary },
-  swapBtn: {
-    backgroundColor: colors.primaryLight + '20', paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 1, borderRadius: borderRadius.sm,
-  },
-  swapText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+    matchPreview: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+      borderTopWidth: 1, borderTopColor: colors.borderLight,
+      backgroundColor: colors.surfaceSecondary + '60',
+    },
+    matchImage: { width: 36, height: 36, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+    matchImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
+    matchInfo: { flex: 1 },
+    matchName: { fontSize: fontSize.sm, color: colors.text },
+    matchMeta: { flexDirection: 'row', gap: spacing.sm, marginTop: 2 },
+    matchPrice: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
+    matchSize: { fontSize: fontSize.xs, color: colors.textTertiary },
+    swapBtn: {
+      backgroundColor: colors.primaryLight + '20', paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.xs + 1, borderRadius: borderRadius.sm,
+    },
+    swapText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
 
-  // Footer
-  footer: {
-    flexDirection: 'row', alignItems: 'center', padding: spacing.md,
-    borderTopWidth: 1, borderTopColor: colors.borderLight,
-    backgroundColor: colors.surface, gap: spacing.md,
-  },
-  footerBtn: { flex: 1 },
-  rematchBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-  },
-  rematchText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+    footer: {
+      flexDirection: 'row', alignItems: 'center', padding: spacing.md,
+      borderTopWidth: 1, borderTopColor: colors.borderLight,
+      backgroundColor: colors.surface, gap: spacing.md,
+    },
+    footerBtn: { flex: 1 },
+    rematchBtn: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+      paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    },
+    rematchText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
 
-  // H-E-B Cart
-  cartSummary: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.sm, marginBottom: spacing.sm,
-  },
-  cartSummaryText: {
-    fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text,
-  },
-  hebCartItem: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: borderRadius.md,
-    padding: spacing.md, marginBottom: spacing.xs,
-  },
-  hebCartImage: { width: 48, height: 48, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
-  hebCartInfo: { flex: 1 },
-  hebCartName: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
-  hebCartPrice: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold, marginTop: 2 },
-  qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 2 },
-  qtyBtn: {
-    width: 30, height: 30, borderRadius: borderRadius.sm,
-    backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
-  },
-  qtyText: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text,
-    minWidth: 24, textAlign: 'center',
-  },
+    cartSummary: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingVertical: spacing.sm, marginBottom: spacing.sm,
+    },
+    cartSummaryText: {
+      fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text,
+    },
+    hebCartItem: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+      backgroundColor: colors.surface, borderRadius: borderRadius.md,
+      padding: spacing.md, marginBottom: spacing.xs,
+    },
+    hebCartImage: { width: 48, height: 48, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+    hebCartInfo: { flex: 1 },
+    hebCartName: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
+    hebCartPrice: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold, marginTop: 2 },
+    qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    qtyBtn: {
+      width: 30, height: 30, borderRadius: borderRadius.sm,
+      backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
+    },
+    qtyText: {
+      fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text,
+      minWidth: 24, textAlign: 'center',
+    },
 
-  // Product picker modal
-  pickerContainer: { flex: 1, backgroundColor: colors.background },
-  pickerHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  pickerTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
-  pickerSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
-  pickerClose: { padding: spacing.xs },
-  pickerList: { padding: spacing.md },
-  pickerSep: { height: 1, backgroundColor: colors.borderLight },
-  pickerProduct: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  pickerProductImage: { width: 56, height: 56, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
-  pickerProductInfo: { flex: 1 },
-  pickerProductName: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.text },
-  pickerProductBrand: { fontSize: fontSize.sm, color: colors.textTertiary, marginTop: 2 },
-  pickerProductRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
-  pickerProductPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
-  pickerProductSize: { fontSize: fontSize.sm, color: colors.textTertiary },
-  outOfStockBadge: {
-    backgroundColor: colors.error + '15', paddingHorizontal: spacing.sm, paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  outOfStockText: { fontSize: fontSize.xs, color: colors.error, fontWeight: fontWeight.medium },
-});
+    pickerContainer: { flex: 1, backgroundColor: colors.background },
+    pickerHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+      padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    pickerTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+    pickerSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+    pickerClose: { padding: spacing.xs },
+    pickerList: { padding: spacing.md },
+    pickerSep: { height: 1, backgroundColor: colors.borderLight },
+    pickerProduct: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+      paddingVertical: spacing.md,
+    },
+    pickerProductImage: { width: 56, height: 56, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+    pickerProductInfo: { flex: 1 },
+    pickerProductName: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.text },
+    pickerProductBrand: { fontSize: fontSize.sm, color: colors.textTertiary, marginTop: 2 },
+    pickerProductRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
+    pickerProductPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+    pickerProductSize: { fontSize: fontSize.sm, color: colors.textTertiary },
+    outOfStockBadge: {
+      backgroundColor: colors.error + '15', paddingHorizontal: spacing.sm, paddingVertical: 2,
+      borderRadius: borderRadius.sm,
+    },
+    outOfStockText: { fontSize: fontSize.xs, color: colors.error, fontWeight: fontWeight.medium },
+  });

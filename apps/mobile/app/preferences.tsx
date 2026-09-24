@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
 import { usePreferences } from '@/hooks/usePreferences';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const CUISINE_OPTIONS = [
   'Mexican', 'Italian', 'Asian', 'American', 'Mediterranean',
@@ -39,6 +39,8 @@ const LEFTOVER_OPTIONS = [
 ] as const;
 
 export default function EditPreferencesScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { preferences, loading, saving, savePreferences } = usePreferences();
 
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
@@ -88,7 +90,7 @@ export default function EditPreferencesScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -98,14 +100,13 @@ export default function EditPreferencesScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header colors={colors} styles={styles} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Household Size */}
         <TextInput
           label="Household Size"
           placeholder="e.g. 4"
@@ -114,7 +115,6 @@ export default function EditPreferencesScreen() {
           keyboardType="number-pad"
         />
 
-        {/* Grocery Budget */}
         <TextInput
           label="Weekly Grocery Budget ($)"
           placeholder="e.g. 150"
@@ -123,7 +123,6 @@ export default function EditPreferencesScreen() {
           keyboardType="decimal-pad"
         />
 
-        {/* Dietary Restrictions */}
         <Text style={styles.label}>Dietary Restrictions</Text>
         <View style={styles.chipGrid}>
           {DIETARY_OPTIONS.map((opt) => (
@@ -140,7 +139,6 @@ export default function EditPreferencesScreen() {
           ))}
         </View>
 
-        {/* Favorite Cuisines */}
         <Text style={styles.label}>Favorite Cuisines</Text>
         <View style={styles.chipGrid}>
           {CUISINE_OPTIONS.map((opt) => (
@@ -157,7 +155,6 @@ export default function EditPreferencesScreen() {
           ))}
         </View>
 
-        {/* Disliked Foods */}
         <TextInput
           label="Disliked Foods"
           placeholder="e.g. mushrooms, olives, liver"
@@ -165,7 +162,6 @@ export default function EditPreferencesScreen() {
           onChangeText={setDislikedFoods}
         />
 
-        {/* Cooking Time */}
         <Text style={styles.label}>Cooking Time Preference</Text>
         <View style={styles.optionGroup}>
           {COOKING_TIME_OPTIONS.map((opt) => (
@@ -178,7 +174,6 @@ export default function EditPreferencesScreen() {
           ))}
         </View>
 
-        {/* Kid Friendly */}
         <TouchableOpacity
           style={styles.toggleRow}
           onPress={() => setKidFriendly(!kidFriendly)}
@@ -192,7 +187,6 @@ export default function EditPreferencesScreen() {
           />
         </TouchableOpacity>
 
-        {/* Leftover Preference */}
         <Text style={styles.label}>Leftover Preference</Text>
         <View style={styles.optionGroup}>
           {LEFTOVER_OPTIONS.map((opt) => (
@@ -216,7 +210,7 @@ export default function EditPreferencesScreen() {
   );
 }
 
-function Header() {
+function Header({ colors, styles }: { colors: ThemeColors; styles: any }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -237,6 +231,9 @@ function Chip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
       style={[styles.chip, selected && styles.chipSelected]}
@@ -259,6 +256,9 @@ function RadioOption({
   selected: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
       style={styles.radioRow}
@@ -277,109 +277,110 @@ function RadioOption({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl * 2,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  label: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  chipGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  chipSelected: {
-    backgroundColor: colors.primary + '15',
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  chipTextSelected: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-  optionGroup: {
-    marginBottom: spacing.md,
-  },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm + 2,
-    gap: spacing.sm,
-  },
-  radioLabel: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  radioLabelSelected: {
-    color: colors.text,
-    fontWeight: fontWeight.medium,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-    marginBottom: spacing.sm,
-  },
-  toggleLabel: {
-    fontSize: fontSize.md,
-    color: colors.text,
-    fontWeight: fontWeight.medium,
-  },
-  saveButton: {
-    marginTop: spacing.lg,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitle: {
+      flex: 1,
+      fontSize: fontSize.lg,
+      fontWeight: fontWeight.semibold,
+      color: colors.text,
+      textAlign: 'center',
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xxl * 2,
+    },
+    centered: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    label: {
+      fontSize: fontSize.sm,
+      fontWeight: fontWeight.medium,
+      color: colors.textSecondary,
+      marginBottom: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    chipGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceSecondary,
+      borderWidth: 1.5,
+      borderColor: 'transparent',
+    },
+    chipSelected: {
+      backgroundColor: colors.primary + '15',
+      borderColor: colors.primary,
+    },
+    chipText: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+      fontWeight: fontWeight.medium,
+    },
+    chipTextSelected: {
+      color: colors.primary,
+      fontWeight: fontWeight.semibold,
+    },
+    optionGroup: {
+      marginBottom: spacing.md,
+    },
+    radioRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: spacing.sm + 2,
+      gap: spacing.sm,
+    },
+    radioLabel: {
+      fontSize: fontSize.md,
+      color: colors.textSecondary,
+    },
+    radioLabelSelected: {
+      color: colors.text,
+      fontWeight: fontWeight.medium,
+    },
+    toggleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: spacing.md,
+      marginBottom: spacing.sm,
+    },
+    toggleLabel: {
+      fontSize: fontSize.md,
+      color: colors.text,
+      fontWeight: fontWeight.medium,
+    },
+    saveButton: {
+      marginTop: spacing.lg,
+    },
+  });

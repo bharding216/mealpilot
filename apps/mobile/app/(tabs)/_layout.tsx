@@ -3,7 +3,7 @@ import { Platform, ColorValue } from 'react-native';
 import { Tabs } from 'expo-router';
 import { SymbolView } from 'expo-symbols';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, fontSize } from '@/lib/theme';
+import { useTheme, fontSize } from '@/lib/theme';
 
 const TAB_ICONS = {
   index: { sf: 'calendar', ionicon: 'calendar-outline' as const, sfFilled: 'calendar.badge.clock', ioniconFilled: 'calendar' as const },
@@ -32,6 +32,8 @@ function TabIcon({ name, color, size, focused }: { name: keyof typeof TAB_ICONS;
 }
 
 export default function TabLayout() {
+  const { colors } = useTheme();
+
   return (
     <Tabs
       screenOptions={{

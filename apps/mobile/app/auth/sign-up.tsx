@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from 'react-native';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { TextInput } from '@/components/TextInput';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/hooks/useAuth';
-import { colors, fontSize, fontWeight, spacing } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing } from '@/lib/theme';
 
 export default function SignUpScreen() {
   const { signUp } = useAuth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -93,44 +95,45 @@ export default function SignUpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    alignItems: 'center',
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xl,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 20,
-    marginBottom: spacing.md,
-  },
-  appName: {
-    fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.bold,
-    color: colors.primaryDark,
-    marginBottom: spacing.sm,
-  },
-  tagline: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  form: {
-    marginTop: spacing.md,
-  },
-  button: {
-    marginTop: spacing.sm,
-  },
-  switchLink: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-  },
-  switchText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-  },
-  switchTextBold: {
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    header: {
+      alignItems: 'center',
+      paddingTop: spacing.xxl,
+      paddingBottom: spacing.xl,
+    },
+    logo: {
+      width: 100,
+      height: 100,
+      borderRadius: 20,
+      marginBottom: spacing.md,
+    },
+    appName: {
+      fontSize: fontSize.xxxl,
+      fontWeight: fontWeight.bold,
+      color: colors.primaryDark,
+      marginBottom: spacing.sm,
+    },
+    tagline: {
+      fontSize: fontSize.md,
+      color: colors.textSecondary,
+    },
+    form: {
+      marginTop: spacing.md,
+    },
+    button: {
+      marginTop: spacing.sm,
+    },
+    switchLink: {
+      alignItems: 'center',
+      paddingVertical: spacing.lg,
+    },
+    switchText: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+    },
+    switchTextBold: {
+      color: colors.primary,
+      fontWeight: fontWeight.semibold,
+    },
+  });

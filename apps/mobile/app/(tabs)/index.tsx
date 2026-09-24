@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { api } from '@/lib/api';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -68,12 +68,16 @@ const WELCOME_MESSAGE: ChatMessage = {
   id: 'welcome',
   role: 'assistant',
   content:
-    "Hi! I'm MealPilot 🍽️\n\nTell me what you're in the mood for and I'll suggest some meals.\n\nFor example:\n• \"High-protein Italian meals for my family\"\n• \"Quick weeknight dinners under 30 min\"\n• \"Something fun and kid-friendly\"",
+    "Hi! 👋 I'm MealPilot \n\nTell me what you're in the mood for and I'll suggest some meals.\n\nFor example:\n• \"High-protein Italian meals for my family\"\n• \"Quick weeknight dinners under 30 min\"\n• \"Something fun and kid-friendly\"",
 };
 
 // ─── Main Screen ───
 
 export default function PlanScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+  const pvStyles = useMemo(() => createPvStyles(colors), [colors]);
+
   const {
     currentPlan,
     loading: planLoading,
@@ -91,7 +95,6 @@ export default function PlanScreen() {
   const [nextDaySlot, setNextDaySlot] = useState(1);
   const flatListRef = useRef<FlatList>(null);
 
-  // Recipe preview bottom sheet state
   const [previewVisible, setPreviewVisible] = useState(false);
   const [previewSuggestion, setPreviewSuggestion] = useState<MealOption | null>(null);
   const [previewMessageId, setPreviewMessageId] = useState<string | null>(null);
@@ -123,8 +126,6 @@ export default function PlanScreen() {
       .map((m) => ({ role: m.role, content: m.content }));
   }, [messages]);
 
-  // ─── Open recipe preview ───
-
   const openPreview = useCallback(async (suggestion: MealOption, messageId: string) => {
     setPreviewSuggestion(suggestion);
     setPreviewMessageId(messageId);
@@ -145,8 +146,6 @@ export default function PlanScreen() {
       setPreviewLoading(false);
     }
   }, []);
-
-  // ─── Add meal from preview ───
 
   const handleAddFromPreview = useCallback(async () => {
     if (!previewSuggestion || !previewMessageId) return;
@@ -180,8 +179,6 @@ export default function PlanScreen() {
       setAddingMeal(null);
     }
   }, [previewSuggestion, previewMessageId, addMealFromSuggestion, nextDaySlot]);
-
-  // ─── Send message ───
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -218,8 +215,6 @@ export default function PlanScreen() {
       setChatLoading(false);
     }
   };
-
-  // ─── Direct add from card (the + button) ───
 
   const handleAddMeal = useCallback(async (
     suggestion: MealOption,
@@ -303,7 +298,6 @@ export default function PlanScreen() {
         </Text>
       </View>
 
-      {/* Suggestion cards */}
       {item.suggestions && item.suggestions.length > 0 && (
         <View style={styles.suggestionsContainer}>
           {item.suggestions.map((s, idx) => {
@@ -349,9 +343,9 @@ export default function PlanScreen() {
                     disabled={isAdding || !!addingMeal}
                   >
                     {isAdding ? (
-                      <ActivityIndicator size="small" color="#fff" />
+                      <ActivityIndicator size="small" color={colors.textInverse} />
                     ) : (
-                      <AppIcon name="plus" size={16} color="#fff" />
+                      <AppIcon name="plus" size={16} color={colors.textInverse} />
                     )}
                   </TouchableOpacity>
                 )}
@@ -393,7 +387,6 @@ export default function PlanScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={90}
       >
-        {/* Chat section */}
         {showChat && (
           <View style={currentPlan && currentPlan.meals.length > 0 && !showChat ? styles.chatCollapsed : styles.chatFull}>
             <FlatList
@@ -408,7 +401,6 @@ export default function PlanScreen() {
           </View>
         )}
 
-        {/* Meal plan view */}
         {!showChat && currentPlan && sortedMeals.length > 0 && (
           <FlatList
             data={sortedMeals}
@@ -450,7 +442,6 @@ export default function PlanScreen() {
           />
         )}
 
-        {/* Empty plan state */}
         {!showChat && (!currentPlan || sortedMeals.length === 0) && (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
@@ -467,7 +458,6 @@ export default function PlanScreen() {
           </View>
         )}
 
-        {/* Input bar */}
         {showChat && (
           <View style={styles.inputContainer}>
             <RNTextInput
@@ -509,76 +499,72 @@ export default function PlanScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setPreviewVisible(false)}
       >
-        <View style={pv.container}>
-          {/* Header */}
-          <View style={pv.header}>
+        <View style={pvStyles.container}>
+          <View style={pvStyles.header}>
             <TouchableOpacity
-              style={pv.closeBtn}
+              style={pvStyles.closeBtn}
               onPress={() => setPreviewVisible(false)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <AppIcon name="xmark" size={18} color={colors.text} />
             </TouchableOpacity>
-            <Text style={pv.headerTitle} numberOfLines={1}>Recipe Preview</Text>
+            <Text style={pvStyles.headerTitle} numberOfLines={1}>Recipe Preview</Text>
             <View style={{ width: 36 }} />
           </View>
 
           {previewLoading ? (
-            <View style={pv.centered}>
+            <View style={pvStyles.centered}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={pv.loadingText}>Generating recipe for</Text>
-              <Text style={pv.loadingTitle}>{previewSuggestion?.title}</Text>
+              <Text style={pvStyles.loadingText}>Generating recipe for</Text>
+              <Text style={pvStyles.loadingTitle}>{previewSuggestion?.title}</Text>
             </View>
           ) : previewRecipe ? (
-            <ScrollView style={pv.scroll} contentContainerStyle={pv.scrollContent} showsVerticalScrollIndicator={false}>
-              {/* Title + tags */}
-              <Text style={pv.title}>{previewRecipe.title}</Text>
-              <Text style={pv.description}>{previewRecipe.description}</Text>
+            <ScrollView style={pvStyles.scroll} contentContainerStyle={pvStyles.scrollContent} showsVerticalScrollIndicator={false}>
+              <Text style={pvStyles.title}>{previewRecipe.title}</Text>
+              <Text style={pvStyles.description}>{previewRecipe.description}</Text>
 
-              <View style={pv.statsRow}>
+              <View style={pvStyles.statsRow}>
                 {previewRecipe.prepTimeMinutes > 0 && (
-                  <View style={pv.stat}>
+                  <View style={pvStyles.stat}>
                     <AppIcon name="timer" size={14} color={colors.primary} />
-                    <Text style={pv.statLabel}>Prep</Text>
-                    <Text style={pv.statValue}>{previewRecipe.prepTimeMinutes} min</Text>
+                    <Text style={pvStyles.statLabel}>Prep</Text>
+                    <Text style={pvStyles.statValue}>{previewRecipe.prepTimeMinutes} min</Text>
                   </View>
                 )}
                 {previewRecipe.cookTimeMinutes > 0 && (
-                  <View style={pv.stat}>
+                  <View style={pvStyles.stat}>
                     <AppIcon name="flame" size={14} color={colors.primary} />
-                    <Text style={pv.statLabel}>Cook</Text>
-                    <Text style={pv.statValue}>{previewRecipe.cookTimeMinutes} min</Text>
+                    <Text style={pvStyles.statLabel}>Cook</Text>
+                    <Text style={pvStyles.statValue}>{previewRecipe.cookTimeMinutes} min</Text>
                   </View>
                 )}
                 {previewRecipe.servings > 0 && (
-                  <View style={pv.stat}>
+                  <View style={pvStyles.stat}>
                     <AppIcon name="person.2" size={14} color={colors.primary} />
-                    <Text style={pv.statLabel}>Serves</Text>
-                    <Text style={pv.statValue}>{previewRecipe.servings}</Text>
+                    <Text style={pvStyles.statLabel}>Serves</Text>
+                    <Text style={pvStyles.statValue}>{previewRecipe.servings}</Text>
                   </View>
                 )}
               </View>
 
-              {/* Tags */}
               {previewSuggestion?.tags && previewSuggestion.tags.length > 0 && (
-                <View style={pv.tagsRow}>
+                <View style={pvStyles.tagsRow}>
                   {previewSuggestion.tags.map((tag, i) => (
-                    <View key={i} style={pv.tagChip}>
-                      <Text style={pv.tagText}>{tag}</Text>
+                    <View key={i} style={pvStyles.tagChip}>
+                      <Text style={pvStyles.tagText}>{tag}</Text>
                     </View>
                   ))}
                 </View>
               )}
 
-              {/* Ingredients */}
-              <Text style={pv.sectionTitle}>Ingredients</Text>
-              <View style={pv.ingredientsList}>
+              <Text style={pvStyles.sectionTitle}>Ingredients</Text>
+              <View style={pvStyles.ingredientsList}>
                 {previewRecipe.ingredients.map((ing: RecipeIngredient, idx: number) => (
-                  <View key={idx} style={pv.ingredientRow}>
-                    <Text style={pv.ingredientEmoji}>
+                  <View key={idx} style={pvStyles.ingredientRow}>
+                    <Text style={pvStyles.ingredientEmoji}>
                       {CATEGORY_EMOJI[ing.category] ?? '📦'}
                     </Text>
-                    <Text style={pv.ingredientText}>
+                    <Text style={pvStyles.ingredientText}>
                       {ing.quantity != null && ing.quantity > 0 ? `${ing.quantity}` : ''}
                       {ing.unit ? ` ${ing.unit}` : ''} {ing.name}
                       {ing.notes ? ` (${ing.notes})` : ''}
@@ -587,15 +573,14 @@ export default function PlanScreen() {
                 ))}
               </View>
 
-              {/* Instructions */}
-              <Text style={pv.sectionTitle}>Instructions</Text>
-              <View style={pv.instructionsList}>
+              <Text style={pvStyles.sectionTitle}>Instructions</Text>
+              <View style={pvStyles.instructionsList}>
                 {previewRecipe.instructions.map((step: string, idx: number) => (
-                  <View key={idx} style={pv.instructionRow}>
-                    <View style={pv.stepBadge}>
-                      <Text style={pv.stepNumber}>{idx + 1}</Text>
+                  <View key={idx} style={pvStyles.instructionRow}>
+                    <View style={pvStyles.stepBadge}>
+                      <Text style={pvStyles.stepNumber}>{idx + 1}</Text>
                     </View>
-                    <Text style={pv.stepText}>{step}</Text>
+                    <Text style={pvStyles.stepText}>{step}</Text>
                   </View>
                 ))}
               </View>
@@ -603,34 +588,33 @@ export default function PlanScreen() {
               <View style={{ height: 100 }} />
             </ScrollView>
           ) : (
-            <View style={pv.centered}>
-              <Text style={pv.errorText}>Unable to load recipe.</Text>
+            <View style={pvStyles.centered}>
+              <Text style={pvStyles.errorText}>Unable to load recipe.</Text>
             </View>
           )}
 
-          {/* Bottom action bar */}
           {previewRecipe && (
-            <View style={pv.bottomBar}>
+            <View style={pvStyles.bottomBar}>
               {previewAdded ? (
-                <View style={pv.addedBar}>
+                <View style={pvStyles.addedBar}>
                   <AppIcon name="checkmark.circle.fill" size={20} color={colors.primary} />
-                  <Text style={pv.addedBarText}>
+                  <Text style={pvStyles.addedBarText}>
                     Added to {DAY_NAMES_FULL[nextDaySlot]}
                   </Text>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={[pv.addBtn, !!addingMeal && pv.addBtnDisabled]}
+                  style={[pvStyles.addBtn, !!addingMeal && pvStyles.addBtnDisabled]}
                   onPress={handleAddFromPreview}
                   disabled={!!addingMeal}
                   activeOpacity={0.8}
                 >
                   {addingMeal === previewSuggestion?.title ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={colors.textInverse} />
                   ) : (
                     <>
-                      <AppIcon name="plus" size={18} color="#fff" />
-                      <Text style={pv.addBtnText}>
+                      <AppIcon name="plus" size={18} color={colors.textInverse} />
+                      <Text style={pvStyles.addBtnText}>
                         Add to Plan — {DAY_NAMES_FULL[nextDaySlot]}
                       </Text>
                     </>
@@ -661,6 +645,8 @@ interface MealCardProps {
 }
 
 function MealCard({ meal, onPress, onReplace }: MealCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const totalTime = (meal.recipe?.prep_time_minutes ?? 0) + (meal.recipe?.cook_time_minutes ?? 0);
 
   return (
@@ -701,199 +687,197 @@ function formatDate(dateStr: string): string {
 
 // ─── Styles ───
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
-  },
-  headerLeft: { flex: 1 },
-  headerTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primaryDark },
-  headerSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
-  chatToggle: {
-    width: 40, height: 40, borderRadius: borderRadius.full,
-    backgroundColor: colors.primaryLight + '15', alignItems: 'center', justifyContent: 'center',
-  },
-  body: { flex: 1 },
-  chatFull: { flex: 1 },
-  chatCollapsed: { maxHeight: 280 },
-  messagesList: { padding: spacing.md, paddingBottom: spacing.sm },
-  messageGroup: { marginBottom: spacing.sm },
-  messageBubble: {
-    maxWidth: '85%', paddingHorizontal: spacing.md, paddingVertical: spacing.md - 4,
-    borderRadius: borderRadius.lg, marginBottom: 0,
-  },
-  userBubble: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: borderRadius.sm },
-  assistantBubble: {
-    alignSelf: 'flex-start', backgroundColor: colors.surface,
-    borderBottomLeftRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.borderLight,
-  },
-  messageText: { fontSize: fontSize.md, lineHeight: 22 },
-  userText: { color: colors.textInverse },
-  assistantText: { color: colors.text },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm,
+      borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    },
+    headerLeft: { flex: 1 },
+    headerTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.primaryDark },
+    headerSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+    chatToggle: {
+      width: 40, height: 40, borderRadius: borderRadius.full,
+      backgroundColor: colors.primaryLight + '15', alignItems: 'center', justifyContent: 'center',
+    },
+    body: { flex: 1 },
+    chatFull: { flex: 1 },
+    chatCollapsed: { maxHeight: 280 },
+    messagesList: { padding: spacing.md, paddingBottom: spacing.sm },
+    messageGroup: { marginBottom: spacing.sm },
+    messageBubble: {
+      maxWidth: '85%', paddingHorizontal: spacing.md, paddingVertical: spacing.md - 4,
+      borderRadius: borderRadius.lg, marginBottom: 0,
+    },
+    userBubble: { alignSelf: 'flex-end', backgroundColor: colors.primary, borderBottomRightRadius: borderRadius.sm },
+    assistantBubble: {
+      alignSelf: 'flex-start', backgroundColor: colors.surface,
+      borderBottomLeftRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.borderLight,
+    },
+    messageText: { fontSize: fontSize.md, lineHeight: 22 },
+    userText: { color: colors.textInverse },
+    assistantText: { color: colors.text },
 
-  // Suggestion cards
-  suggestionsContainer: { marginTop: spacing.sm, gap: spacing.sm },
-  suggestionCard: {
-    backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.borderLight, flexDirection: 'row', gap: spacing.sm,
-  },
-  suggestionCardAdded: { borderColor: colors.primary, backgroundColor: colors.primaryLight + '08' },
-  suggestionInfo: { flex: 1 },
-  suggestionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: 4 },
-  suggestionDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.xs },
-  suggestionMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tagChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing.sm,
-    paddingVertical: 2, borderRadius: borderRadius.full,
-  },
-  tagText: { fontSize: fontSize.xs, color: colors.textTertiary },
-  addMealBtn: {
-    width: 36, height: 36, borderRadius: borderRadius.full, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center', alignSelf: 'center',
-  },
-  addedBadge: { alignSelf: 'center', padding: spacing.xs },
+    suggestionsContainer: { marginTop: spacing.sm, gap: spacing.sm },
+    suggestionCard: {
+      backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md,
+      borderWidth: 1, borderColor: colors.borderLight, flexDirection: 'row', gap: spacing.sm,
+    },
+    suggestionCardAdded: { borderColor: colors.primary, backgroundColor: colors.primaryLight + '08' },
+    suggestionInfo: { flex: 1 },
+    suggestionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: 4 },
+    suggestionDesc: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.xs },
+    suggestionMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+    tagChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 3,
+      backgroundColor: colors.surfaceSecondary, paddingHorizontal: spacing.sm,
+      paddingVertical: 2, borderRadius: borderRadius.full,
+    },
+    tagText: { fontSize: fontSize.xs, color: colors.textTertiary },
+    addMealBtn: {
+      width: 36, height: 36, borderRadius: borderRadius.full, backgroundColor: colors.primary,
+      alignItems: 'center', justifyContent: 'center', alignSelf: 'center',
+    },
+    addedBadge: { alignSelf: 'center', padding: spacing.xs },
 
-  // Input
-  inputContainer: {
-    flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  textInput: {
-    flex: 1, backgroundColor: colors.surfaceSecondary, borderRadius: borderRadius.xl,
-    paddingHorizontal: spacing.md, paddingTop: spacing.sm + 2, paddingBottom: spacing.sm + 2,
-    fontSize: fontSize.md, color: colors.text, maxHeight: 100, marginRight: spacing.sm,
-  },
-  sendButton: {
-    width: 40, height: 40, borderRadius: borderRadius.full,
-    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-  },
-  sendButtonDisabled: { backgroundColor: colors.surfaceSecondary },
+    inputContainer: {
+      flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderLight,
+      backgroundColor: colors.surface,
+    },
+    textInput: {
+      flex: 1, backgroundColor: colors.surfaceSecondary, borderRadius: borderRadius.xl,
+      paddingHorizontal: spacing.md, paddingTop: spacing.sm + 2, paddingBottom: spacing.sm + 2,
+      fontSize: fontSize.md, color: colors.text, maxHeight: 100, marginRight: spacing.sm,
+    },
+    sendButton: {
+      width: 40, height: 40, borderRadius: borderRadius.full,
+      backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    },
+    sendButtonDisabled: { backgroundColor: colors.surfaceSecondary },
 
-  // Meal plan
-  mealsList: { padding: spacing.md, paddingBottom: spacing.xxl },
-  separator: { height: spacing.sm },
-  refreshBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, paddingVertical: spacing.sm, marginBottom: spacing.sm,
-  },
-  refreshText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  mealCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md },
-  mealCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm },
-  dayBadge: {
-    backgroundColor: colors.primary + '15', paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs, borderRadius: borderRadius.sm,
-  },
-  dayBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
-  mealType: { flex: 1, fontSize: fontSize.xs, color: colors.textTertiary, textTransform: 'capitalize' },
-  mealTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.xs },
-  mealDescription: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
-  mealMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  metaText: { fontSize: fontSize.xs, color: colors.textTertiary },
-  addMoreBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md, marginTop: spacing.md,
-    borderWidth: 1, borderColor: colors.primary + '40', borderStyle: 'dashed', borderRadius: borderRadius.md,
-  },
-  addMoreText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+    mealsList: { padding: spacing.md, paddingBottom: spacing.xxl },
+    separator: { height: spacing.sm },
+    refreshBanner: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: spacing.sm, paddingVertical: spacing.sm, marginBottom: spacing.sm,
+    },
+    refreshText: { fontSize: fontSize.sm, color: colors.textSecondary },
+    mealCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md },
+    mealCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm },
+    dayBadge: {
+      backgroundColor: colors.primary + '15', paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.xs, borderRadius: borderRadius.sm,
+    },
+    dayBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
+    mealType: { flex: 1, fontSize: fontSize.xs, color: colors.textTertiary, textTransform: 'capitalize' },
+    mealTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.xs },
+    mealDescription: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
+    mealMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    metaText: { fontSize: fontSize.xs, color: colors.textTertiary },
+    addMoreBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+      paddingVertical: spacing.md, marginTop: spacing.md,
+      borderWidth: 1, borderColor: colors.primary + '40', borderStyle: 'dashed', borderRadius: borderRadius.md,
+    },
+    addMoreText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
 
-  // Empty
-  emptyState: {
-    flex: 1, justifyContent: 'center', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    width: 80, height: 80, borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm },
-  emptyDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.lg },
-  startButton: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2, backgroundColor: colors.primaryLight + '15',
-    borderRadius: borderRadius.full, gap: spacing.xs,
-  },
-  startText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
-});
+    emptyState: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2,
+    },
+    emptyIcon: {
+      width: 80, height: 80, borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm },
+    emptyDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.lg },
+    startButton: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm + 2, backgroundColor: colors.primaryLight + '15',
+      borderRadius: borderRadius.full, gap: spacing.xs,
+    },
+    startText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+  });
 
 // ─── Recipe Preview Styles ───
 
-const pv = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
-  },
-  closeBtn: {
-    width: 36, height: 36, borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
-  },
-  headerTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  loadingText: { fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.md },
-  loadingTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, marginTop: spacing.xs, textAlign: 'center' },
-  errorText: { fontSize: fontSize.md, color: colors.textSecondary },
+const createPvStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+      borderBottomWidth: 1, borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    },
+    closeBtn: {
+      width: 36, height: 36, borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
+    },
+    headerTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+    loadingText: { fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.md },
+    loadingTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, marginTop: spacing.xs, textAlign: 'center' },
+    errorText: { fontSize: fontSize.md, color: colors.textSecondary },
 
-  scroll: { flex: 1 },
-  scrollContent: { padding: spacing.lg },
+    scroll: { flex: 1 },
+    scrollContent: { padding: spacing.lg },
 
-  title: { fontSize: 24, fontWeight: fontWeight.bold, color: colors.text, marginBottom: spacing.xs },
-  description: { fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 22, marginBottom: spacing.md },
+    title: { fontSize: 24, fontWeight: fontWeight.bold, color: colors.text, marginBottom: spacing.xs },
+    description: { fontSize: fontSize.md, color: colors.textSecondary, lineHeight: 22, marginBottom: spacing.md },
 
-  statsRow: {
-    flexDirection: 'row', gap: spacing.lg, paddingVertical: spacing.md,
-    borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.borderLight, marginBottom: spacing.md,
-  },
-  stat: { alignItems: 'center', gap: 4 },
-  statLabel: { fontSize: fontSize.xs, color: colors.textTertiary },
-  statValue: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+    statsRow: {
+      flexDirection: 'row', gap: spacing.lg, paddingVertical: spacing.md,
+      borderTopWidth: 1, borderBottomWidth: 1, borderColor: colors.borderLight, marginBottom: spacing.md,
+    },
+    stat: { alignItems: 'center', gap: 4 },
+    statLabel: { fontSize: fontSize.xs, color: colors.textTertiary },
+    statValue: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
 
-  tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
-  tagChip: {
-    backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs, borderRadius: borderRadius.full,
-  },
-  tagText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
+    tagsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.lg },
+    tagChip: {
+      backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm + 2,
+      paddingVertical: spacing.xs, borderRadius: borderRadius.full,
+    },
+    tagText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary },
 
-  sectionTitle: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text,
-    marginBottom: spacing.md, marginTop: spacing.sm,
-  },
+    sectionTitle: {
+      fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text,
+      marginBottom: spacing.md, marginTop: spacing.sm,
+    },
 
-  ingredientsList: { gap: spacing.sm, marginBottom: spacing.lg },
-  ingredientRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  ingredientEmoji: { fontSize: 16, width: 24, textAlign: 'center' },
-  ingredientText: { flex: 1, fontSize: fontSize.md, color: colors.text, lineHeight: 22 },
+    ingredientsList: { gap: spacing.sm, marginBottom: spacing.lg },
+    ingredientRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+    ingredientEmoji: { fontSize: 16, width: 24, textAlign: 'center' },
+    ingredientText: { flex: 1, fontSize: fontSize.md, color: colors.text, lineHeight: 22 },
 
-  instructionsList: { gap: spacing.md },
-  instructionRow: { flexDirection: 'row', gap: spacing.sm },
-  stepBadge: {
-    width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary,
-    alignItems: 'center', justifyContent: 'center', marginTop: 1,
-  },
-  stepNumber: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#fff' },
-  stepText: { flex: 1, fontSize: fontSize.md, color: colors.text, lineHeight: 22 },
+    instructionsList: { gap: spacing.md },
+    instructionRow: { flexDirection: 'row', gap: spacing.sm },
+    stepBadge: {
+      width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary,
+      alignItems: 'center', justifyContent: 'center', marginTop: 1,
+    },
+    stepNumber: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textInverse },
+    stepText: { flex: 1, fontSize: fontSize.md, color: colors.text, lineHeight: 22 },
 
-  bottomBar: {
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.surface,
-  },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primary, paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-  },
-  addBtnDisabled: { opacity: 0.6 },
-  addBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: '#fff' },
-  addedBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md,
-  },
-  addedBarText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
-});
+    bottomBar: {
+      paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+      borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.surface,
+    },
+    addBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+      backgroundColor: colors.primary, paddingVertical: spacing.md,
+      borderRadius: borderRadius.md,
+    },
+    addBtnDisabled: { opacity: 0.6 },
+    addBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textInverse },
+    addedBar: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+      paddingVertical: spacing.md,
+    },
+    addedBarText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+  });

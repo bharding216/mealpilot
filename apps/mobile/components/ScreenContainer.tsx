@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight } from '@/lib/theme';
+import { useTheme, ThemeColors, spacing, fontSize, fontWeight } from '@/lib/theme';
 
 interface ScreenContainerProps {
   children: React.ReactNode;
@@ -26,6 +26,9 @@ export function ScreenContainer({
   keyboardAvoiding = false,
   style,
 }: ScreenContainerProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   const content = (
     <View style={[styles.inner, style]}>
       {title && <Text style={styles.title}>{title}</Text>}
@@ -63,26 +66,27 @@ export function ScreenContainer({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  flex: {
-    flex: 1,
-  },
-  inner: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  title: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    flex: {
+      flex: 1,
+    },
+    inner: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    title: {
+      fontSize: fontSize.xxl,
+      fontWeight: fontWeight.bold,
+      color: colors.text,
+      marginTop: spacing.md,
+      marginBottom: spacing.lg,
+    },
+  });

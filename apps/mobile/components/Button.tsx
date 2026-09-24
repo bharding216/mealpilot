@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -7,7 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors, fontSize, fontWeight, borderRadius, spacing } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, borderRadius, spacing } from '@/lib/theme';
 
 interface ButtonProps {
   title: string;
@@ -28,7 +28,23 @@ export function Button({
   disabled = false,
   style,
 }: ButtonProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const isDisabled = disabled || loading;
+
+  const variantStyles: Record<string, ViewStyle> = {
+    primary: { backgroundColor: colors.primary },
+    secondary: { backgroundColor: colors.surfaceSecondary },
+    outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.primary },
+    ghost: { backgroundColor: 'transparent' },
+  };
+
+  const variantTextStyles: Record<string, TextStyle> = {
+    primary: { color: colors.textInverse },
+    secondary: { color: colors.text },
+    outline: { color: colors.primary },
+    ghost: { color: colors.primary },
+  };
 
   return (
     <TouchableOpacity
@@ -64,22 +80,23 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
-  base: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: borderRadius.md,
-  },
-  text: {
-    fontWeight: fontWeight.semibold,
-  },
-  disabled: {
-    opacity: 0.5,
-  },
-  disabledText: {
-    opacity: 0.7,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    base: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: borderRadius.md,
+    },
+    text: {
+      fontWeight: fontWeight.semibold,
+    },
+    disabled: {
+      opacity: 0.5,
+    },
+    disabledText: {
+      opacity: 0.7,
+    },
+  });
 
 const sizeStyles: Record<string, ViewStyle> = {
   sm: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
@@ -91,18 +108,4 @@ const textSizeStyles: Record<string, TextStyle> = {
   sm: { fontSize: fontSize.sm },
   md: { fontSize: fontSize.md },
   lg: { fontSize: fontSize.lg },
-};
-
-const variantStyles: Record<string, ViewStyle> = {
-  primary: { backgroundColor: colors.primary },
-  secondary: { backgroundColor: colors.surfaceSecondary },
-  outline: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: colors.primary },
-  ghost: { backgroundColor: 'transparent' },
-};
-
-const variantTextStyles: Record<string, TextStyle> = {
-  primary: { color: colors.textInverse },
-  secondary: { color: colors.text },
-  outline: { color: colors.primary },
-  ghost: { color: colors.primary },
 };

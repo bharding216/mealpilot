@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,9 +15,11 @@ import { AppIcon } from '@/components/AppIcon';
 import { Button } from '@/components/Button';
 import { useHeb } from '@/hooks/useHeb';
 import { useMealPlan } from '@/hooks/useMealPlan';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 export default function HebMatchScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { mealPlanId } = useLocalSearchParams<{ mealPlanId: string }>();
   const { currentPlan } = useMealPlan();
   const {
@@ -104,11 +106,10 @@ export default function HebMatchScreen() {
     );
   }, [itemsWithMatches, addToCart, fetchMatches, planId]);
 
-  // Not connected
   if (!loading && !session?.connected) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.centered}>
           <AppIcon name="storefront" size={48} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>Connect your H‑E‑B account</Text>
@@ -124,7 +125,7 @@ export default function HebMatchScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -132,11 +133,10 @@ export default function HebMatchScreen() {
     );
   }
 
-  // No matches yet
   if (itemsWithMatches.length === 0 || itemsWithMatches.every((i) => i.product_matches.length === 0)) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.centered}>
           <AppIcon name="cart" size={48} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>Match to H‑E‑B Products</Text>
@@ -163,7 +163,7 @@ export default function HebMatchScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header />
+      <Header colors={colors} styles={styles} />
 
       <View style={styles.summaryBar}>
         <View>
@@ -216,7 +216,7 @@ export default function HebMatchScreen() {
   );
 }
 
-function Header() {
+function Header({ colors, styles }: { colors: ThemeColors; styles: any }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -229,6 +229,8 @@ function Header() {
 }
 
 function MatchedItemRow({ item }: { item: any }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const match = item.product_matches[0];
   const isInCart = match?.status === 'in_cart';
 
@@ -282,52 +284,53 @@ function MatchedItemRow({ item }: { item: any }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2, borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
-  },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, textAlign: 'center' },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2, gap: spacing.md },
-  emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginTop: spacing.md },
-  emptyDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  connectButton: { minWidth: 200, marginTop: spacing.sm },
-  summaryBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
-  summaryTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
-  summarySubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
-  storeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.full, gap: 4, maxWidth: 160 },
-  storeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  errorBanner: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.sm, borderRadius: borderRadius.sm },
-  errorText: { fontSize: fontSize.sm, color: colors.error },
-  listContent: { padding: spacing.md, paddingBottom: spacing.xxl },
-  separator: { height: spacing.sm },
-  itemCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md },
-  itemCardInCart: { opacity: 0.7 },
-  ingredientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  ingredientName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text, flex: 1 },
-  ingredientQty: { fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.sm },
-  productRow: { flexDirection: 'row', gap: spacing.sm },
-  productImage: { width: 56, height: 56, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
-  productImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  productInfo: { flex: 1 },
-  productName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text, lineHeight: 18 },
-  productMeta: { flexDirection: 'row', gap: spacing.sm, marginTop: 2 },
-  productBrand: { fontSize: fontSize.xs, color: colors.textTertiary },
-  productSize: { fontSize: fontSize.xs, color: colors.textTertiary },
-  productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
-  productPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
-  productUnitPrice: { fontSize: fontSize.xs, color: colors.textTertiary },
-  outOfStockBadge: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
-  outOfStockText: { fontSize: fontSize.xs, color: colors.error, fontWeight: fontWeight.medium },
-  inCartBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.full },
-  inCartText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
-  noMatchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
-  noMatchText: { fontSize: fontSize.sm, color: colors.textTertiary },
-  footer: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.surface, gap: spacing.md },
-  rematchButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  rematchText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
-  addButton: { flex: 1 },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2, borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    },
+    backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, textAlign: 'center' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2, gap: spacing.md },
+    emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginTop: spacing.md },
+    emptyDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    connectButton: { minWidth: 200, marginTop: spacing.sm },
+    summaryBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+    summaryTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text },
+    summarySubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+    storeBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.full, gap: 4, maxWidth: 160 },
+    storeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
+    errorBanner: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginHorizontal: spacing.md, marginTop: spacing.sm, borderRadius: borderRadius.sm },
+    errorText: { fontSize: fontSize.sm, color: colors.error },
+    listContent: { padding: spacing.md, paddingBottom: spacing.xxl },
+    separator: { height: spacing.sm },
+    itemCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md },
+    itemCardInCart: { opacity: 0.7 },
+    ingredientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+    ingredientName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text, flex: 1 },
+    ingredientQty: { fontSize: fontSize.sm, color: colors.textSecondary, marginLeft: spacing.sm },
+    productRow: { flexDirection: 'row', gap: spacing.sm },
+    productImage: { width: 56, height: 56, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+    productImagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
+    productInfo: { flex: 1 },
+    productName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text, lineHeight: 18 },
+    productMeta: { flexDirection: 'row', gap: spacing.sm, marginTop: 2 },
+    productBrand: { fontSize: fontSize.xs, color: colors.textTertiary },
+    productSize: { fontSize: fontSize.xs, color: colors.textTertiary },
+    productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
+    productPrice: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary },
+    productUnitPrice: { fontSize: fontSize.xs, color: colors.textTertiary },
+    outOfStockBadge: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.sm },
+    outOfStockText: { fontSize: fontSize.xs, color: colors.error, fontWeight: fontWeight.medium },
+    inCartBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight + '15', paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: borderRadius.full },
+    inCartText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
+    noMatchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+    noMatchText: { fontSize: fontSize.sm, color: colors.textTertiary },
+    footer: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.surface, gap: spacing.md },
+    rematchButton: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+    rematchText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+    addButton: { flex: 1 },
+  });

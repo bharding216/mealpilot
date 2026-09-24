@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/hooks/useAuth';
 import { MealPlanProvider } from '@/hooks/useMealPlan';
 import { HebBridgeProvider } from '@/components/HebBridge';
-import { colors } from '@/lib/theme';
+import { ThemeProvider, useTheme } from '@/lib/theme';
 
 function NavigationGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
@@ -26,23 +26,35 @@ function NavigationGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function ThemedStack() {
+  const { colors, isDark } = useTheme();
+
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <NavigationGuard>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background },
+            animation: 'slide_from_right',
+          }}
+        />
+      </NavigationGuard>
+    </>
+  );
+}
+
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <MealPlanProvider>
-        <HebBridgeProvider>
-          <StatusBar style="dark" />
-          <NavigationGuard>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background },
-                animation: 'slide_from_right',
-              }}
-            />
-          </NavigationGuard>
-        </HebBridgeProvider>
-      </MealPlanProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <MealPlanProvider>
+          <HebBridgeProvider>
+            <ThemedStack />
+          </HebBridgeProvider>
+        </MealPlanProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

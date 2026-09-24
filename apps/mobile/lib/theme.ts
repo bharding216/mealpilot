@@ -1,4 +1,9 @@
-export const colors = {
+import React, { createContext, useContext, useMemo } from 'react';
+import { useColorScheme } from 'react-native';
+
+// ─── Light Colors ───
+
+const lightColors = {
   primary: '#2E7D32',
   primaryLight: '#4CAF50',
   primaryDark: '#1B5E20',
@@ -21,7 +26,75 @@ export const colors = {
   warning: '#F57C00',
   error: '#D32F2F',
   info: '#1976D2',
+
+  shadow: '#000000',
 } as const;
+
+// ─── Dark Colors ───
+
+const darkColors = {
+  primary: '#4CAF50',
+  primaryLight: '#66BB6A',
+  primaryDark: '#388E3C',
+  accent: '#FFB74D',
+  accentLight: '#FFCC80',
+
+  background: '#121212',
+  surface: '#1E1E1E',
+  surfaceSecondary: '#2A2A2A',
+
+  text: '#ECECEC',
+  textSecondary: '#B0B0B0',
+  textTertiary: '#707070',
+  textInverse: '#121212',
+
+  border: '#333333',
+  borderLight: '#262626',
+
+  success: '#66BB6A',
+  warning: '#FFB74D',
+  error: '#EF5350',
+  info: '#42A5F5',
+
+  shadow: '#000000',
+} as const;
+
+// ─── Theme Types ───
+
+export type ThemeColors = {
+  readonly [K in keyof typeof lightColors]: string;
+};
+
+interface ThemeContextValue {
+  colors: ThemeColors;
+  isDark: boolean;
+}
+
+// ─── Theme Context ───
+
+const ThemeContext = createContext<ThemeContextValue>({
+  colors: lightColors,
+  isDark: false,
+});
+
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  const colorScheme = useColorScheme();
+  console.log('[Theme] useColorScheme →', colorScheme);
+  const isDark = colorScheme === 'dark';
+
+  const value = useMemo(
+    () => ({ colors: isDark ? darkColors : lightColors, isDark }),
+    [isDark],
+  );
+
+  return React.createElement(ThemeContext.Provider, { value }, children);
+}
+
+export function useTheme() {
+  return useContext(ThemeContext);
+}
+
+// ─── Non-theme Constants (unchanged across themes) ───
 
 export const spacing = {
   xs: 4,

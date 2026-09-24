@@ -1,20 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
 import { useAuth } from '@/hooks/useAuth';
-import { useHebBridge } from '@/components/HebBridge';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
-  const bridge = useHebBridge();
-
-  useEffect(() => {
-    bridge.checkAuth().catch(() => {});
-  }, []);
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const handleSignOut = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -59,16 +55,6 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Store</Text>
-        <MenuItem
-          icon="storefront"
-          label="H‑E‑B Store"
-          subtitle={bridge.isAuthenticated ? (bridge.store?.name ?? 'Connected') : 'Not connected'}
-          onPress={() => router.push('/heb-connect')}
-        />
-      </View>
-
       <View style={styles.signOutContainer}>
         <Button
           title="Sign Out"
@@ -81,7 +67,7 @@ export default function ProfileScreen() {
   );
 }
 
-function MenuItem({ icon, label, subtitle, onPress }: { icon: string; label: string; subtitle?: string; onPress?: () => void }) {
+function MenuItem({ icon, label, subtitle, onPress, colors, styles }: { icon: string; label: string; subtitle?: string; onPress?: () => void; colors: ThemeColors; styles: any }) {
   return (
     <TouchableOpacity style={styles.menuItem} activeOpacity={0.7} onPress={onPress}>
       <AppIcon name={icon as any} size={20} color={colors.primary} />
@@ -94,97 +80,98 @@ function MenuItem({ icon, label, subtitle, onPress }: { icon: string; label: str
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  email: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-  },
-  memberSince: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  section: {
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-  },
-  prefsButton: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  prefsButtonInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  prefsButtonContent: {
-    flex: 1,
-  },
-  prefsButtonLabel: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
-    color: colors.text,
-  },
-  prefsButtonDesc: {
-    fontSize: fontSize.sm,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 2,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
-  },
-  menuItemContent: {
-    flex: 1,
-  },
-  menuLabel: {
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  menuSubtitle: {
-    fontSize: fontSize.sm,
-    color: colors.textTertiary,
-    marginTop: 2,
-  },
-  signOutContainer: {
-    paddingVertical: spacing.lg,
-  },
-  signOutButton: {
-    borderColor: colors.error,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      padding: spacing.md,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.lg,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: borderRadius.full,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: spacing.md,
+    },
+    userInfo: {
+      flex: 1,
+    },
+    email: {
+      fontSize: fontSize.md,
+      fontWeight: fontWeight.semibold,
+      color: colors.text,
+    },
+    memberSince: {
+      fontSize: fontSize.sm,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    section: {
+      marginBottom: spacing.lg,
+    },
+    sectionTitle: {
+      fontSize: fontSize.sm,
+      fontWeight: fontWeight.semibold,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      marginBottom: spacing.sm,
+    },
+    prefsButton: {
+      backgroundColor: colors.surface,
+      borderRadius: borderRadius.md,
+      padding: spacing.md,
+    },
+    prefsButtonInner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+    },
+    prefsButtonContent: {
+      flex: 1,
+    },
+    prefsButtonLabel: {
+      fontSize: fontSize.md,
+      fontWeight: fontWeight.medium,
+      color: colors.text,
+    },
+    prefsButtonDesc: {
+      fontSize: fontSize.sm,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md - 2,
+      borderRadius: borderRadius.md,
+      marginBottom: spacing.xs,
+      gap: spacing.sm,
+    },
+    menuItemContent: {
+      flex: 1,
+    },
+    menuLabel: {
+      fontSize: fontSize.md,
+      color: colors.text,
+    },
+    menuSubtitle: {
+      fontSize: fontSize.sm,
+      color: colors.textTertiary,
+      marginTop: 2,
+    },
+    signOutContainer: {
+      paddingVertical: spacing.lg,
+    },
+    signOutButton: {
+      borderColor: colors.error,
+    },
+  });

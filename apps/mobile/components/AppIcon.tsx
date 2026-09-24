@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { SymbolView, SymbolViewProps, SFSymbol } from 'expo-symbols';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '@/lib/theme';
 
 /**
  * Maps our icon names to SF Symbol names (iOS) and Ionicons names (Android fallback).
@@ -70,8 +71,11 @@ interface AppIconProps {
 
 /**
  * Renders an SF Symbol on iOS, falls back to Ionicons on Android.
+ * Defaults to the current theme's text color when no color is provided.
  */
-export function AppIcon({ name, size = 22, color = '#000000', weight = 'medium' }: AppIconProps) {
+export function AppIcon({ name, size = 22, color, weight = 'medium' }: AppIconProps) {
+  const { colors } = useTheme();
+  const resolvedColor = color ?? colors.text;
   const mapping = ICON_MAP[name];
 
   if (Platform.OS === 'ios' && mapping) {
@@ -79,7 +83,7 @@ export function AppIcon({ name, size = 22, color = '#000000', weight = 'medium' 
       <SymbolView
         name={mapping.sf}
         size={size}
-        tintColor={color}
+        tintColor={resolvedColor}
         weight={weight}
         style={{ width: size, height: size }}
       />
@@ -88,5 +92,5 @@ export function AppIcon({ name, size = 22, color = '#000000', weight = 'medium' 
 
   // Android / unmapped fallback
   const iconName = mapping?.ionicon ?? (name as any);
-  return <Ionicons name={iconName} size={size} color={color} />;
+  return <Ionicons name={iconName} size={size} color={resolvedColor} />;
 }

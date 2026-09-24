@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   TextInput as RNTextInput,
@@ -6,7 +6,7 @@ import {
   StyleSheet,
   TextInputProps as RNTextInputProps,
 } from 'react-native';
-import { colors, fontSize, fontWeight, borderRadius, spacing } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, borderRadius, spacing } from '@/lib/theme';
 
 interface TextInputProps extends RNTextInputProps {
   label?: string;
@@ -14,6 +14,8 @@ interface TextInputProps extends RNTextInputProps {
 }
 
 export function TextInput({ label, error, style, ...props }: TextInputProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const [focused, setFocused] = useState(false);
 
   return (
@@ -42,35 +44,36 @@ export function TextInput({ label, error, style, ...props }: TextInputProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: spacing.md,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md - 2,
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  inputFocused: {
-    borderColor: colors.primary,
-  },
-  inputError: {
-    borderColor: colors.error,
-  },
-  error: {
-    fontSize: fontSize.xs,
-    color: colors.error,
-    marginTop: spacing.xs,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: {
+      marginBottom: spacing.md,
+    },
+    label: {
+      fontSize: fontSize.sm,
+      fontWeight: fontWeight.medium,
+      color: colors.textSecondary,
+      marginBottom: spacing.xs,
+    },
+    input: {
+      backgroundColor: colors.surface,
+      borderWidth: 1.5,
+      borderColor: colors.border,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.md - 2,
+      fontSize: fontSize.md,
+      color: colors.text,
+    },
+    inputFocused: {
+      borderColor: colors.primary,
+    },
+    inputError: {
+      borderColor: colors.error,
+    },
+    error: {
+      fontSize: fontSize.xs,
+      color: colors.error,
+      marginTop: spacing.xs,
+    },
+  });

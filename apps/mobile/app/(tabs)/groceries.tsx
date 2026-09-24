@@ -14,7 +14,7 @@ import { ScreenContainer } from '@/components/ScreenContainer';
 import { Button } from '@/components/Button';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { useGrocery } from '@/hooks/useGrocery';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const CATEGORY_LABELS: Record<string, string> = {
   produce: '🥬  Produce',
@@ -45,6 +45,8 @@ interface GroceryItem {
 }
 
 export default function GroceriesScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { currentPlan } = useMealPlan();
   const {
     groceryList,
@@ -71,42 +73,32 @@ export default function GroceriesScreen() {
     }
   };
 
-  // Group items by category into sections
   const sections = useMemo(() => {
     if (!groceryList?.items.length) return [];
-
     const groups = new Map<string, GroceryItem[]>();
     for (const item of groceryList.items) {
-      if (item.in_pantry) continue; // Show pantry items separately
+      if (item.in_pantry) continue;
       const cat = item.category || 'other';
       const list = groups.get(cat) ?? [];
       list.push(item);
       groups.set(cat, list);
     }
-
     const pantryItems = groceryList.items.filter((i) => i.in_pantry);
-
     const result = CATEGORY_ORDER
       .filter((cat) => groups.has(cat))
       .map((cat) => ({
         title: CATEGORY_LABELS[cat] ?? cat,
         data: groups.get(cat)!,
       }));
-
     if (pantryItems.length > 0) {
-      result.push({
-        title: '✅  Already in Pantry',
-        data: pantryItems,
-      });
+      result.push({ title: '✅  Already in Pantry', data: pantryItems });
     }
-
     return result;
   }, [groceryList?.items]);
 
   const checkedCount = groceryList?.items.filter((i) => i.checked && !i.in_pantry).length ?? 0;
   const totalCount = groceryList?.items.filter((i) => !i.in_pantry).length ?? 0;
 
-  // No meal plan state
   if (!currentPlan) {
     return (
       <ScreenContainer title="Groceries">
@@ -118,10 +110,7 @@ export default function GroceriesScreen() {
           <Text style={styles.emptyDescription}>
             Create a meal plan first, then generate your grocery list here.
           </Text>
-          <TouchableOpacity
-            style={styles.goHomeButton}
-            onPress={() => router.navigate('/(tabs)/')}
-          >
+          <TouchableOpacity style={styles.goHomeButton} onPress={() => router.navigate('/(tabs)/')}>
             <AppIcon name="bubble.left" size={16} color={colors.primary} />
             <Text style={styles.goHomeText}>Start planning</Text>
           </TouchableOpacity>
@@ -130,7 +119,6 @@ export default function GroceriesScreen() {
     );
   }
 
-  // Has meal plan but no grocery list generated yet
   if (!groceryList && !loading) {
     return (
       <ScreenContainer title="Groceries">
@@ -149,10 +137,7 @@ export default function GroceriesScreen() {
             loading={generating}
             style={styles.generateButton}
           />
-          <TouchableOpacity
-            style={styles.pantryLink}
-            onPress={() => router.push('/pantry')}
-          >
+          <TouchableOpacity style={styles.pantryLink} onPress={() => router.push('/pantry')}>
             <AppIcon name="tray" size={16} color={colors.primary} />
             <Text style={styles.pantryLinkText}>Manage pantry items first</Text>
           </TouchableOpacity>
@@ -161,7 +146,6 @@ export default function GroceriesScreen() {
     );
   }
 
-  // Loading
   if (loading) {
     return (
       <ScreenContainer title="Groceries">
@@ -172,10 +156,8 @@ export default function GroceriesScreen() {
     );
   }
 
-  // Grocery list view
   return (
     <ScreenContainer title="Groceries">
-      {/* Progress bar */}
       <View style={styles.progressContainer}>
         <View style={styles.progressHeader}>
           <Text style={styles.progressText}>
@@ -215,7 +197,6 @@ export default function GroceriesScreen() {
         stickySectionHeadersEnabled={false}
       />
 
-      {/* Actions */}
       <View style={styles.footer}>
         <Button
           title="Regenerate List"
@@ -246,6 +227,9 @@ function GroceryItemRow({
   item: GroceryItem;
   onToggle: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
       style={[styles.itemRow, item.checked && styles.itemRowChecked]}
@@ -285,167 +269,36 @@ function formatQty(quantity: number | null, unit: string | null): string {
   return unit ? `${q} ${unit}` : q;
 }
 
-const styles = StyleSheet.create({
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  emptyDescription: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  goHomeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    backgroundColor: colors.primaryLight + '15',
-    borderRadius: borderRadius.full,
-    gap: spacing.xs,
-  },
-  goHomeText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-  },
-  generateButton: {
-    minWidth: 220,
-  },
-  pantryLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.md,
-    gap: spacing.xs,
-  },
-  pantryLinkText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.medium,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressContainer: {
-    marginBottom: spacing.md,
-  },
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  progressText: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
-  },
-  pantryNavText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: colors.borderLight,
-    borderRadius: borderRadius.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.full,
-  },
-  errorBanner: {
-    backgroundColor: colors.error + '15',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
-  },
-  errorText: {
-    fontSize: fontSize.sm,
-    color: colors.error,
-  },
-  sectionHeader: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    paddingVertical: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  listContent: {
-    paddingBottom: spacing.xxl,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.xs,
-    gap: spacing.sm,
-  },
-  itemRowChecked: {
-    opacity: 0.6,
-  },
-  itemContent: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: fontSize.md,
-    color: colors.text,
-  },
-  itemNameChecked: {
-    textDecorationLine: 'line-through',
-    color: colors.textTertiary,
-  },
-  itemQty: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  itemQtyChecked: {
-    color: colors.textTertiary,
-  },
-  pantryBadge: {
-    backgroundColor: colors.primaryLight + '20',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  pantryBadgeText: {
-    fontSize: fontSize.xs,
-    color: colors.primary,
-    fontWeight: fontWeight.semibold,
-  },
-  footer: {
-    paddingVertical: spacing.sm,
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2 },
+    emptyIcon: { width: 80, height: 80, borderRadius: borderRadius.full, backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.lg },
+    emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm },
+    emptyDescription: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.lg },
+    goHomeButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm + 2, backgroundColor: colors.primaryLight + '15', borderRadius: borderRadius.full, gap: spacing.xs },
+    goHomeText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+    generateButton: { minWidth: 220 },
+    pantryLink: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md, gap: spacing.xs },
+    pantryLinkText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    progressContainer: { marginBottom: spacing.md },
+    progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+    progressText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+    pantryNavText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+    progressBar: { height: 6, backgroundColor: colors.borderLight, borderRadius: borderRadius.full, overflow: 'hidden' },
+    progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: borderRadius.full },
+    errorBanner: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.sm, marginBottom: spacing.md },
+    errorText: { fontSize: fontSize.sm, color: colors.error },
+    sectionHeader: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text, paddingVertical: spacing.sm, marginTop: spacing.sm },
+    listContent: { paddingBottom: spacing.xxl },
+    itemRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm + 2, borderRadius: borderRadius.sm, marginBottom: spacing.xs, gap: spacing.sm },
+    itemRowChecked: { opacity: 0.6 },
+    itemContent: { flex: 1 },
+    itemName: { fontSize: fontSize.md, color: colors.text },
+    itemNameChecked: { textDecorationLine: 'line-through', color: colors.textTertiary },
+    itemQty: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+    itemQtyChecked: { color: colors.textTertiary },
+    pantryBadge: { backgroundColor: colors.primaryLight + '20', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: borderRadius.sm },
+    pantryBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+    footer: { paddingVertical: spacing.sm, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.borderLight },
+  });

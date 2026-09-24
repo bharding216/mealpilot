@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppIcon } from '@/components/AppIcon';
 import { Button } from '@/components/Button';
 import { useHebBridge } from '@/components/HebBridge';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const HEB_SIGN_IN_URL = 'https://www.heb.com/account/sign-in';
 const CART_HASH = 'c14a956d6d675f23e63f87511bf2ce03573e2f9de29db226dadb5dca9063d3f7';
@@ -23,6 +23,8 @@ const CART_HASH = 'c14a956d6d675f23e63f87511bf2ce03573e2f9de29db226dadb5dca9063d
 type ScreenState = 'checking' | 'connected' | 'prompt' | 'webview' | 'verifying';
 
 export default function HebConnectScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const bridge = useHebBridge();
   const loginWebViewRef = useRef<WebView>(null);
   const [state, setState] = useState<ScreenState>('checking');
@@ -42,11 +44,7 @@ export default function HebConnectScreen() {
 
   const verifyLogin = useCallback(async () => {
     setState('verifying');
-
-    // Reload the bridge WebView so it picks up the new cookies
     bridge.reload();
-
-    // Give the bridge time to reload and re-initialize
     await new Promise((r) => setTimeout(r, 4000));
 
     try {
@@ -75,8 +73,6 @@ export default function HebConnectScreen() {
   const handleNavigationChange = useCallback(
     (navState: WebViewNavigation) => {
       setWebViewUrl(navState.url);
-
-      // Detect post-login: user has been redirected back to www.heb.com (not accounts or sign-in)
       const url = navState.url.toLowerCase();
       const isMainSite =
         url.includes('www.heb.com') &&
@@ -98,7 +94,6 @@ export default function HebConnectScreen() {
         text: 'Disconnect',
         style: 'destructive',
         onPress: () => {
-          // Clear WebView cookies for heb.com
           bridge.reload();
           setState('prompt');
           setStoreName(null);
@@ -107,11 +102,10 @@ export default function HebConnectScreen() {
     ]);
   };
 
-  // ── Checking ──
   if (state === 'checking') {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.checkingText}>Checking connection...</Text>
@@ -120,11 +114,10 @@ export default function HebConnectScreen() {
     );
   }
 
-  // ── Connected ──
   if (state === 'connected') {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
           <View style={styles.statusCard}>
             <AppIcon name="checkmark.circle.fill" size={48} color={colors.primary} />
@@ -156,11 +149,10 @@ export default function HebConnectScreen() {
     );
   }
 
-  // ── Prompt (not connected) ──
   if (state === 'prompt') {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.content}>
           <View style={styles.promptCard}>
             <AppIcon name="storefront" size={48} color={colors.primary} />
@@ -179,11 +171,10 @@ export default function HebConnectScreen() {
     );
   }
 
-  // ── Verifying ──
   if (state === 'verifying') {
     return (
       <SafeAreaView style={styles.container}>
-        <Header />
+        <Header colors={colors} styles={styles} />
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.checkingText}>Verifying your connection...</Text>
@@ -192,7 +183,6 @@ export default function HebConnectScreen() {
     );
   }
 
-  // ── WebView Login ──
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.webViewHeader}>
@@ -229,7 +219,7 @@ export default function HebConnectScreen() {
   );
 }
 
-function Header() {
+function Header({ colors, styles }: { colors: ThemeColors; styles: any }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -241,7 +231,7 @@ function Header() {
   );
 }
 
-// ─── Cart Test Section (for debugging/testing) ───
+// ─── Cart Test Section ───
 
 interface SearchResult {
   productId: string;
@@ -255,6 +245,8 @@ interface SearchResult {
 }
 
 function CartTestSection() {
+  const { colors } = useTheme();
+  const ts = useMemo(() => createTestStyles(colors), [colors]);
   const bridge = useHebBridge();
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -353,73 +345,55 @@ function CartTestSection() {
   };
 
   return (
-    <View style={testStyles.section}>
-      <Text style={testStyles.sectionTitle}>🧪 Test H‑E‑B Integration</Text>
+    <View style={ts.section}>
+      <Text style={ts.sectionTitle}>🧪 Test H‑E‑B Integration</Text>
 
-      {/* Quick search buttons */}
-      <View style={testStyles.searchRow}>
-        <TouchableOpacity
-          style={testStyles.searchChip}
-          onPress={() => handleSearch('milk')}
-          disabled={searching}
-        >
-          <Text style={testStyles.chipText}>🥛 Search "milk"</Text>
+      <View style={ts.searchRow}>
+        <TouchableOpacity style={ts.searchChip} onPress={() => handleSearch('milk')} disabled={searching}>
+          <Text style={ts.chipText}>🥛 Search "milk"</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={testStyles.searchChip}
-          onPress={() => handleSearch('bread')}
-          disabled={searching}
-        >
-          <Text style={testStyles.chipText}>🍞 Search "bread"</Text>
+        <TouchableOpacity style={ts.searchChip} onPress={() => handleSearch('bread')} disabled={searching}>
+          <Text style={ts.chipText}>🍞 Search "bread"</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          style={testStyles.searchChip}
-          onPress={() => handleSearch('chicken')}
-          disabled={searching}
-        >
-          <Text style={testStyles.chipText}>🍗 Search "chicken"</Text>
+        <TouchableOpacity style={ts.searchChip} onPress={() => handleSearch('chicken')} disabled={searching}>
+          <Text style={ts.chipText}>🍗 Search "chicken"</Text>
         </TouchableOpacity>
       </View>
 
       {searching && (
-        <View style={testStyles.loadingRow}>
+        <View style={ts.loadingRow}>
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={testStyles.loadingText}>Searching...</Text>
+          <Text style={ts.loadingText}>Searching...</Text>
         </View>
       )}
 
-      {/* Search results */}
       {results.length > 0 && (
-        <View style={testStyles.resultsList}>
-          <Text style={testStyles.resultsLabel}>
+        <View style={ts.resultsList}>
+          <Text style={ts.resultsLabel}>
             {results.length} product{results.length === 1 ? '' : 's'} found:
           </Text>
           {results.map((p) => (
-            <View key={p.productId} style={testStyles.productCard}>
+            <View key={p.productId} style={ts.productCard}>
               {p.imageUrl && (
-                <Image source={{ uri: p.imageUrl }} style={testStyles.productImage} />
+                <Image source={{ uri: p.imageUrl }} style={ts.productImage} />
               )}
-              <View style={testStyles.productInfo}>
-                <Text style={testStyles.productName} numberOfLines={2}>
-                  {p.name}
-                </Text>
-                {p.brand && <Text style={testStyles.productBrand}>{p.brand}</Text>}
-                <View style={testStyles.productPriceRow}>
-                  {p.price != null && (
-                    <Text style={testStyles.productPrice}>${p.price.toFixed(2)}</Text>
-                  )}
-                  {p.size && <Text style={testStyles.productSize}>{p.size}</Text>}
+              <View style={ts.productInfo}>
+                <Text style={ts.productName} numberOfLines={2}>{p.name}</Text>
+                {p.brand && <Text style={ts.productBrand}>{p.brand}</Text>}
+                <View style={ts.productPriceRow}>
+                  {p.price != null && <Text style={ts.productPrice}>${p.price.toFixed(2)}</Text>}
+                  {p.size && <Text style={ts.productSize}>{p.size}</Text>}
                 </View>
               </View>
               <TouchableOpacity
-                style={[testStyles.addBtn, !p.inStock && testStyles.addBtnDisabled]}
+                style={[ts.addBtn, !p.inStock && ts.addBtnDisabled]}
                 onPress={() => handleAddToCart(p)}
                 disabled={adding !== null || !p.inStock}
               >
                 {adding === p.productId ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator size="small" color={colors.textInverse} />
                 ) : (
-                  <AppIcon name="plus" size={16} color="#fff" />
+                  <AppIcon name="plus" size={16} color={colors.textInverse} />
                 )}
               </TouchableOpacity>
             </View>
@@ -427,22 +401,20 @@ function CartTestSection() {
         </View>
       )}
 
-      {/* View cart button */}
-      <TouchableOpacity style={testStyles.viewCartBtn} onPress={handleViewCart} disabled={loadingCart}>
+      <TouchableOpacity style={ts.viewCartBtn} onPress={handleViewCart} disabled={loadingCart}>
         {loadingCart ? (
           <ActivityIndicator size="small" color={colors.primary} />
         ) : (
           <>
             <AppIcon name="cart" size={18} color={colors.primary} />
-            <Text style={testStyles.viewCartText}>View H‑E‑B Cart</Text>
+            <Text style={ts.viewCartText}>View H‑E‑B Cart</Text>
           </>
         )}
       </TouchableOpacity>
 
-      {/* Cart items */}
       {cartItems.length > 0 && (
-        <View style={testStyles.cartSection}>
-          <Text style={testStyles.cartTitle}>
+        <View style={ts.cartSection}>
+          <Text style={ts.cartTitle}>
             Cart ({cartItemCount} item{cartItemCount === 1 ? '' : 's'})
             {cartTotal != null && ` · $${cartTotal.toFixed(2)}`}
           </Text>
@@ -450,25 +422,25 @@ function CartTestSection() {
             const itemKey = `${item.productId}-${item.skuId}`;
             const isUpdating = updatingItem === itemKey;
             return (
-              <View key={`${item.productId}-${idx}`} style={testStyles.cartItem}>
+              <View key={`${item.productId}-${idx}`} style={ts.cartItem}>
                 {item.imageUrl && (
-                  <Image source={{ uri: item.imageUrl }} style={testStyles.cartItemImage} />
+                  <Image source={{ uri: item.imageUrl }} style={ts.cartItemImage} />
                 )}
-                <View style={testStyles.cartItemInfo}>
-                  <Text style={testStyles.cartItemName} numberOfLines={2}>
+                <View style={ts.cartItemInfo}>
+                  <Text style={ts.cartItemName} numberOfLines={2}>
                     {item.name || 'Unknown item'}
                   </Text>
                   {item.price != null && (
-                    <Text style={testStyles.cartItemPrice}>${item.price.toFixed(2)}</Text>
+                    <Text style={ts.cartItemPrice}>${item.price.toFixed(2)}</Text>
                   )}
                 </View>
-                <View style={testStyles.qtyControls}>
+                <View style={ts.qtyControls}>
                   {isUpdating ? (
                     <ActivityIndicator size="small" color={colors.primary} />
                   ) : (
                     <>
                       <TouchableOpacity
-                        style={testStyles.qtyBtn}
+                        style={ts.qtyBtn}
                         onPress={() => {
                           if (item.quantity <= 1) {
                             handleRemoveItem(item);
@@ -483,9 +455,9 @@ function CartTestSection() {
                           color={item.quantity <= 1 ? colors.error : colors.text}
                         />
                       </TouchableOpacity>
-                      <Text style={testStyles.qtyText}>{item.quantity}</Text>
+                      <Text style={ts.qtyText}>{item.quantity}</Text>
                       <TouchableOpacity
-                        style={testStyles.qtyBtn}
+                        style={ts.qtyBtn}
                         onPress={() => handleUpdateQuantity(item, item.quantity + 1)}
                       >
                         <AppIcon name="plus" size={14} color={colors.text} />
@@ -502,218 +474,84 @@ function CartTestSection() {
   );
 }
 
-const testStyles = StyleSheet.create({
-  section: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  searchRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  searchChip: {
-    backgroundColor: colors.primaryLight + '20',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-  },
-  chipText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
-    color: colors.primary,
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  loadingText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  resultsLabel: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  resultsList: { marginBottom: spacing.md },
-  productCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  productImage: { width: 44, height: 44, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
-  productInfo: { flex: 1 },
-  productName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
-  productBrand: { fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 1 },
-  productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  productPrice: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
-  productSize: { fontSize: fontSize.xs, color: colors.textTertiary },
-  addBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addBtnDisabled: { backgroundColor: colors.textTertiary },
-  viewCartBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm + 2,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.sm,
-  },
-  viewCartText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
-  cartSection: { marginTop: spacing.sm },
-  cartTitle: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  cartItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  cartItemImage: { width: 44, height: 44, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
-  cartItemInfo: { flex: 1 },
-  cartItemName: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
-  cartItemPrice: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold, marginTop: 2 },
-  qtyControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  qtyBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyText: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    minWidth: 24,
-    textAlign: 'center',
-  },
-});
+const createTestStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    section: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md, marginBottom: spacing.lg },
+    sectionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text, marginBottom: spacing.md },
+    searchRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.md },
+    searchChip: { backgroundColor: colors.primaryLight + '20', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.full },
+    chipText: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.primary },
+    loadingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+    loadingText: { fontSize: fontSize.sm, color: colors.textSecondary },
+    resultsLabel: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginBottom: spacing.sm },
+    resultsList: { marginBottom: spacing.md },
+    productCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+    productImage: { width: 44, height: 44, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+    productInfo: { flex: 1 },
+    productName: { fontSize: fontSize.sm, fontWeight: fontWeight.medium, color: colors.text },
+    productBrand: { fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 1 },
+    productPriceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+    productPrice: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary },
+    productSize: { fontSize: fontSize.xs, color: colors.textTertiary },
+    addBtn: { width: 32, height: 32, borderRadius: borderRadius.full, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+    addBtnDisabled: { backgroundColor: colors.textTertiary },
+    viewCartBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingVertical: spacing.sm + 2, borderWidth: 1, borderColor: colors.primary, borderRadius: borderRadius.md, marginBottom: spacing.sm },
+    viewCartText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+    cartSection: { marginTop: spacing.sm },
+    cartTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text, marginBottom: spacing.sm },
+    cartItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+    cartItemImage: { width: 44, height: 44, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary },
+    cartItemInfo: { flex: 1 },
+    cartItemName: { fontSize: fontSize.sm, color: colors.text, fontWeight: fontWeight.medium },
+    cartItemPrice: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold, marginTop: 2 },
+    qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+    qtyBtn: { width: 30, height: 30, borderRadius: borderRadius.sm, backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center' },
+    qtyText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.text, minWidth: 24, textAlign: 'center' },
+  });
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: {
-    flex: 1,
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
-  checkingText: { fontSize: fontSize.sm, color: colors.textSecondary },
-  content: { flex: 1, padding: spacing.lg },
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2, borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    },
+    backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    headerTitle: { flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, textAlign: 'center' },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md },
+    checkingText: { fontSize: fontSize.sm, color: colors.textSecondary },
+    content: { flex: 1, padding: spacing.lg },
 
-  // Connected state
-  statusCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  statusTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text },
-  storeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
-  storeLabel: { fontSize: fontSize.md, color: colors.textSecondary },
-  actionButton: { marginBottom: spacing.sm },
-  disconnectButton: { borderColor: colors.error },
+    statusCard: {
+      backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.xl,
+      alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
+    },
+    statusTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text },
+    storeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs },
+    storeLabel: { fontSize: fontSize.md, color: colors.textSecondary },
+    actionButton: { marginBottom: spacing.sm },
+    disconnectButton: { borderColor: colors.error },
 
-  // Prompt state
-  promptCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.xl,
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  promptTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  promptDesc: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  signInButton: { width: '100%', marginTop: spacing.xs },
+    promptCard: {
+      backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.xl,
+      alignItems: 'center', gap: spacing.md,
+    },
+    promptTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text, textAlign: 'center' },
+    promptDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },
+    signInButton: { width: '100%', marginTop: spacing.xs },
 
-  // WebView state
-  webViewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  webViewHeaderTitle: {
-    flex: 1,
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  doneButton: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  doneButtonText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-  },
-  webView: { flex: 1 },
-  loadingOverlay: {
-    ...StyleSheet.absoluteFill as object,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+    webViewHeader: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.sm, borderBottomWidth: 1,
+      borderBottomColor: colors.borderLight, backgroundColor: colors.surface,
+    },
+    webViewHeaderTitle: { flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text, textAlign: 'center' },
+    doneButton: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+    doneButtonText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+    webView: { flex: 1 },
+    loadingOverlay: {
+      ...StyleSheet.absoluteFill as object,
+      backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center',
+    },
+  });

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,12 +12,14 @@ import { AppIcon } from '@/components/AppIcon';
 import { router } from 'expo-router';
 import { ScreenContainer } from '@/components/ScreenContainer';
 import { useMealPlan } from '@/hooks/useMealPlan';
-import { colors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
+import { useTheme, ThemeColors, fontSize, fontWeight, spacing, borderRadius } from '@/lib/theme';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const DAY_NAMES_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export default function PlanScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const { currentPlan, loading, error, fetchLatestMealPlan, replaceMeal } = useMealPlan();
 
   useEffect(() => {
@@ -143,6 +145,8 @@ interface MealCardProps {
 }
 
 function MealCard({ meal, onPress, onReplace }: MealCardProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
   const totalTime = (meal.recipe?.prep_time_minutes ?? 0) + (meal.recipe?.cook_time_minutes ?? 0);
 
   return (
@@ -186,145 +190,42 @@ function formatDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: spacing.md,
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.xxl * 2,
-  },
-  emptyIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  emptyDescription: {
-    fontSize: fontSize.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: spacing.lg,
-  },
-  goHomeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm + 2,
-    backgroundColor: colors.primaryLight + '15',
-    borderRadius: borderRadius.full,
-    gap: spacing.xs,
-  },
-  goHomeText: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
-  },
-  weekHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  planTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.text,
-  },
-  weekLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  errorBanner: {
-    backgroundColor: colors.error + '15',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
-  },
-  errorText: {
-    fontSize: fontSize.sm,
-    color: colors.error,
-  },
-  listContent: {
-    paddingBottom: spacing.xxl,
-  },
-  separator: {
-    height: spacing.sm,
-  },
-  mealCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  mealCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  dayBadge: {
-    backgroundColor: colors.primary + '15',
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.sm,
-  },
-  dayBadgeText: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
-  },
-  mealType: {
-    flex: 1,
-    fontSize: fontSize.xs,
-    color: colors.textTertiary,
-    textTransform: 'capitalize',
-  },
-  mealTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  mealDescription: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: spacing.sm,
-  },
-  mealMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  metaText: {
-    fontSize: fontSize.xs,
-    color: colors.textTertiary,
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    loadingText: { marginTop: spacing.md, fontSize: fontSize.md, color: colors.textSecondary },
+    emptyState: {
+      flex: 1, justifyContent: 'center', alignItems: 'center',
+      paddingHorizontal: spacing.xl, paddingBottom: spacing.xxl * 2,
+    },
+    emptyIcon: {
+      width: 80, height: 80, borderRadius: borderRadius.full,
+      backgroundColor: colors.surfaceSecondary, alignItems: 'center', justifyContent: 'center',
+      marginBottom: spacing.lg,
+    },
+    emptyTitle: { fontSize: fontSize.xl, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm },
+    emptyDescription: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', lineHeight: 22, marginBottom: spacing.lg },
+    goHomeButton: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg,
+      paddingVertical: spacing.sm + 2, backgroundColor: colors.primaryLight + '15',
+      borderRadius: borderRadius.full, gap: spacing.xs,
+    },
+    goHomeText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary },
+    weekHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+    planTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
+    weekLabel: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+    errorBanner: { backgroundColor: colors.error + '15', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: borderRadius.sm, marginBottom: spacing.md },
+    errorText: { fontSize: fontSize.sm, color: colors.error },
+    listContent: { paddingBottom: spacing.xxl },
+    separator: { height: spacing.sm },
+    mealCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md },
+    mealCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm, gap: spacing.sm },
+    dayBadge: { backgroundColor: colors.primary + '15', paddingHorizontal: spacing.sm + 2, paddingVertical: spacing.xs, borderRadius: borderRadius.sm },
+    dayBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
+    mealType: { flex: 1, fontSize: fontSize.xs, color: colors.textTertiary, textTransform: 'capitalize' },
+    mealTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.xs },
+    mealDescription: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
+    mealMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+    metaText: { fontSize: fontSize.xs, color: colors.textTertiary },
+  });
