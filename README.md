@@ -1,5 +1,9 @@
 # MealPilot
 
+<p align="center">
+  <img src="apps/mobile/assets/icon.png" width="150" alt="MealPilot">
+</p>
+
 AI-powered household meal planning assistant that generates weekly meal plans and turns them into an H‑E‑B grocery cart.
 
 ## Stack
