@@ -1,7 +1,7 @@
 import type { ExpoConfig, ConfigContext } from 'expo/config';
 
 const IS_DEV = process.env.APP_VARIANT === 'development';
-const BUNDLE_ID = IS_DEV ? 'com.mealpilot.app.dev' : 'com.mealpilot.app';
+const BUNDLE_ID = IS_DEV ? 'com.toddly.mealpilot.dev' : 'com.toddly.mealpilot';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
