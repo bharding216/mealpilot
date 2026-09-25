@@ -8,7 +8,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   name: IS_DEV ? 'MealPilot Dev' : 'MealPilot',
   slug: 'mealpilot',
   owner: 'bharding80',
-  version: '0.1.0',
+  version: '1.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
